@@ -1,0 +1,78 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Theme tokens: lagoon teal + saffron on a cool paper background */
+:root {
+  --ink: 23 37 46;          /* #17252E */
+  --muted: 91 107 117;      /* #5B6B75 */
+  --paper: 246 247 245;     /* #F6F7F5 */
+  --surface: 255 255 255;
+  --line: 223 228 226;
+  --brand: 15 110 102;      /* #0F6E66 */
+  --brand-dark: 11 84 78;
+  --brand-soft: 227 241 239;
+  --saffron-soft: 252 241 222;
+  --side: 14 42 45;         /* #0E2A2D */
+  --side-hover: 24 60 63;
+  --side-text: 196 214 212;
+  color-scheme: light;
+}
+.dark {
+  --ink: 228 236 235;
+  --muted: 150 167 170;
+  --paper: 13 22 24;
+  --surface: 21 33 36;
+  --line: 40 56 59;
+  --brand: 56 178 164;
+  --brand-dark: 34 140 128;
+  --brand-soft: 22 52 52;
+  --saffron-soft: 58 44 20;
+  --side: 9 18 20;
+  --side-hover: 24 40 43;
+  --side-text: 170 190 190;
+  color-scheme: dark;
+}
+
+html, body, #root { height: 100%; }
+body { @apply bg-paper text-ink font-sans antialiased; font-feature-settings: 'tnum' 1; }
+:focus-visible { outline: 2px solid rgb(var(--brand)); outline-offset: 2px; }
+::selection { background: rgb(var(--brand) / 0.2); }
+
+@layer components {
+  .card { @apply bg-surface rounded-xl shadow-card; }
+  .input { @apply w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink placeholder:text-muted/70 focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20 disabled:opacity-60; }
+  .label { @apply mb-1 block text-[13px] font-medium text-ink; }
+  .btn { @apply inline-flex items-center justify-center gap-2 rounded-lg px-3.5 py-2 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50 whitespace-nowrap; }
+  .btn-primary { @apply btn bg-brand text-white hover:bg-brand-dark; }
+  .btn-secondary { @apply btn border border-line bg-surface text-ink hover:bg-paper; }
+  .btn-ghost { @apply btn text-muted hover:bg-paper hover:text-ink; }
+  .btn-danger { @apply btn bg-bad text-white hover:brightness-95; }
+  .btn-sm { @apply px-2.5 py-1.5 text-[13px]; }
+  .chip { @apply inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold; }
+  .th { @apply px-3 py-2.5 text-left text-xs font-semibold text-muted whitespace-nowrap; }
+  .td { @apply px-3 py-2.5 text-sm align-middle; }
+}
+
+/* scrollbars */
+.thin-scroll::-webkit-scrollbar { width: 8px; height: 8px; }
+.thin-scroll::-webkit-scrollbar-thumb { background: rgb(var(--line)); border-radius: 8px; }
+.side-scroll::-webkit-scrollbar { width: 6px; }
+.side-scroll::-webkit-scrollbar-thumb { background: rgb(var(--side-hover)); border-radius: 6px; }
+
+@keyframes pop-in { from { opacity: 0; transform: translateY(6px) scale(0.98); } to { opacity: 1; transform: none; } }
+@keyframes slide-in { from { transform: translateX(24px); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes pulse-ring { 0% { box-shadow: 0 0 0 0 rgb(232 163 61 / 0.6); } 100% { box-shadow: 0 0 0 10px rgb(232 163 61 / 0); } }
+.anim-pop { animation: pop-in 0.16s ease-out; }
+.anim-slide { animation: slide-in 0.2s ease-out; }
+.pulse-ring { animation: pulse-ring 1.4s infinite; }
+@media (prefers-reduced-motion: reduce) { .anim-pop, .anim-slide, .pulse-ring { animation: none; } }
+
+/* print: only the printable area */
+@media print {
+  body * { visibility: hidden; }
+  .print-area, .print-area * { visibility: visible; }
+  .print-area { position: absolute; inset: 0; padding: 24px; background: white; color: black; }
+  .no-print { display: none !important; }
+  @page { margin: 12mm; }
+}

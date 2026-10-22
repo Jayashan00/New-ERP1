@@ -1,0 +1,21 @@
+{
+  "name": "nexa-erp-backend",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "REST API for NexaERP — auth, role permissions, business logic (shared with the frontend).",
+  "engines": { "node": ">=22.5" },
+  "scripts": {
+    "start": "node --no-warnings src/server.js",
+    "dev": "node --no-warnings --watch src/server.js",
+    "seed": "node --no-warnings src/server.js --reseed-only",
+    "test": "node --no-warnings tests/logic.test.mjs",
+    "test:api": "node --no-warnings src/selftest.js"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "express": "^4.21.2",
+    "jsonwebtoken": "^9.0.2"
+  }
+}
