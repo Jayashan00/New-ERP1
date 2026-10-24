@@ -12,6 +12,7 @@ const day = (s) => String(s || '').slice(0, 10);
 const count = (arr, f) => { const m = {}; for (const x of arr) { const k = typeof f === 'function' ? f(x) : x[f]; if (k == null || k === '') continue; m[k] = (m[k] || 0) + 1; } return m; };
 const sumByKey = (arr, kf, vf) => { const m = {}; for (const x of arr) { const k = kf(x); if (k == null || k === '') continue; m[k] = (m[k] || 0) + (Number(vf(x)) || 0); } return m; };
 const toPie = (obj, labeler = (k) => k) => Object.entries(obj).map(([k, v]) => ({ name: labeler(k), value: round(v) })).sort((a, b) => b.value - a.value);
+const pl = (n, one, many) => `${n} ${n === 1 ? one : many}`;
 const pretty = (s) => String(s || '').replace(/_/g, ' ').replace(/^\w/, (c) => c.toUpperCase());
 const shortDay = (s) => new Date(s + 'T12:00').toLocaleDateString('en', { day: 'numeric', month: 'short' });
 const series = (days, rowsByFn) => { const out = []; for (let i = days - 1; i >= 0; i--) { const d = dOff(-i); out.push({ name: shortDay(d), ...rowsByFn(d) }); } return out; };
@@ -135,13 +136,13 @@ function computeDashboardRaw(svc) {
     if (has('hotel')) { const dirty = R('rooms').filter((r) => r.status === 'dirty').length; if (dirty) D.alerts.push({ text: `${dirty} rooms are dirty and not yet cleaned`, to: '/app/housekeeping-board', tone: 'warn' }); }
     if (has('restaurant')) { const li = restSnap(R).lowIng.length; if (li) D.alerts.push({ text: `${li} kitchen ingredients are running low`, to: '/app/e/ingredients', tone: 'warn' }); }
     D.lists.push({ title: 'Latest activity', link: '/app/e/audit_log', columns: ['Who', 'Did', 'What', 'When'], rows: R('audit_log').slice().sort((a, b) => b.date.localeCompare(a.date)).slice(0, 7).map((a) => [a.user_name, pretty(a.action), `${a.entity} ${a.record}`, { datetime: a.date }]) });
-    D.actions = [has('hotel') && { label: 'New booking', to: '/app/new-booking', icon: 'CalendarPlus' }, has('restaurant') && { label: 'Restaurant POS', to: '/app/restaurant-pos', icon: 'MonitorSmartphone' }, has('shop') && { label: 'Shop POS', to: '/app/shop-pos', icon: 'ScanBarcode' }, has('sales') && { label: 'New invoice', to: '/app/e/sales_invoices?new=1', icon: 'Receipt' }, { label: 'Add user', to: '/app/users', icon: 'UserPlus' }, { label: 'Reports', to: '/app/reports', icon: 'BarChart3' }].filter(Boolean);
+    D.actions = [{ label: 'Front desk — today’s guests', to: '/app/front-desk', icon: 'ConciergeBell' }, { label: 'Restaurant tables', to: '/app/floor-plan', icon: 'LayoutGrid' }, { label: 'Money & reports', to: '/app/reports', icon: 'BarChart3' }, { label: 'Add a staff login', to: '/app/users', icon: 'UserPlus' }, { label: 'Who can do what (roles)', to: '/app/roles', icon: 'ShieldCheck' }, { label: 'Edit the website', to: '/app/website', icon: 'Image' }];
     return D;
   }
 
   if (type === 'hotel' || type === 'frontdesk') {
     const h = hotelSnap(R);
-    D.summary = `${h.arrivals.length} guests arrive today, ${h.departures.length} check out, and ${h.inHouse.length} are in-house. ${h.statusCounts.available || 0} rooms are ready to sell.`;
+    D.summary = `Today: ${pl(h.arrivals.length, 'guest arrives', 'guests arrive')}, ${pl(h.departures.length, 'guest checks out', 'guests check out')} and ${pl(h.inHouse.length, 'guest is', 'guests are')} staying with us. ${pl(h.statusCounts.available || 0, 'room is', 'rooms are')} clean and ready to sell.`;
     D.kpis = [{ label: 'Occupancy', value: h.occ, fmt: 'percent', hint: `${h.inHouse.length}/${h.rooms.length} rooms` }, { label: 'Arrivals today', value: h.arrivals.length }, { label: 'Departures today', value: h.departures.length }, { label: 'Available rooms', value: h.statusCounts.available || 0, tone: 'ok' }];
     if (type === 'hotel') D.kpis.push({ label: 'Average daily rate', value: h.adr, fmt: 'money' }, { label: 'RevPAR', value: h.revpar, fmt: 'money' });
     D.lists.push({ title: 'Arriving today', link: '/app/front-desk', columns: ['Booking', 'Guest', 'Room', 'Nights', 'Status'], rows: h.arrivals.map((r) => [r.number, cust(r.guest_id), room(r.room_id), nights(r.check_in, r.check_out), { status: r.status }]), empty: 'No more arrivals today.' });
@@ -158,21 +159,21 @@ function computeDashboardRaw(svc) {
       const mt = R('maintenance').filter((m) => m.status !== 'resolved').length; if (mt) D.alerts.push({ text: `${mt} maintenance jobs open`, to: '/app/e/maintenance', tone: 'warn' });
       const chErr = R('channels').filter((x) => x.status === 'error'); if (chErr.length) D.alerts.push({ text: `${chErr.map((x) => x.name).join(', ')} channel sync failed`, to: '/app/e/channels', tone: 'bad' });
     }
-    const dirty = h.statusCounts.dirty || 0; if (dirty) D.alerts.push({ text: `${dirty} rooms need cleaning before they can be sold`, to: '/app/housekeeping-board', tone: 'warn' });
-    D.actions = [{ label: 'New booking', to: '/app/new-booking', icon: 'CalendarPlus' }, { label: 'Front desk', to: '/app/front-desk', icon: 'ConciergeBell' }, { label: 'Room chart', to: '/app/room-chart', icon: 'CalendarRange' }, { label: 'Housekeeping', to: '/app/housekeeping-board', icon: 'Sparkles' }];
-    if (type === 'hotel') D.actions.push({ label: 'Night audit', to: '/app/night-audit', icon: 'MoonStar' }, { label: 'Hotel reports', to: '/app/hotel-reports', icon: 'PieChart' });
+    const dirty = h.statusCounts.dirty || 0; if (dirty) D.alerts.push({ text: `${pl(dirty, 'room needs', 'rooms need')} cleaning before ${dirty === 1 ? 'it' : 'they'} can be sold`, to: '/app/housekeeping-board', tone: 'warn' });
+    D.actions = [{ label: 'Check a guest in', to: '/app/front-desk', icon: 'ConciergeBell' }, { label: 'Make a new booking', to: '/app/new-booking', icon: 'CalendarPlus' }, { label: 'Take a payment / check out', to: '/app/guest-billing', icon: 'Receipt' }, { label: 'See all rooms by date', to: '/app/room-chart', icon: 'CalendarRange' }, { label: 'Book a taxi', to: '/app/e/transport_bookings?new=1', icon: 'Car' }, { label: 'Park a guest’s car', to: '/app/parking', icon: 'ParkingSquare' }];
+    if (type === 'hotel') D.actions.push({ label: 'Update prices on booking sites', to: '/app/channel-manager', icon: 'Share2' }, { label: 'Close the day (night audit)', to: '/app/night-audit', icon: 'MoonStar' });
     return D;
   }
 
   if (type === 'concierge') {
     const trips = R('transport_bookings'); const slots = R('parking_slots'); const reqs = R('guest_requests').filter((q) => q.status !== 'done');
     const todayTrips = trips.filter((t) => String(t.pickup_time).slice(0, 10) === today() && t.status !== 'cancelled');
-    D.summary = `${todayTrips.length} transfers today, ${trips.filter((t) => t.status === 'on_trip').length} on the road now. ${slots.filter((x) => x.status === 'free').length} parking bays free and ${reqs.length} guest requests open.`;
+    D.summary = `${pl(todayTrips.length, 'transfer', 'transfers')} today, ${trips.filter((t) => t.status === 'on_trip').length} on the road now. ${pl(slots.filter((x) => x.status === 'free').length, 'parking bay', 'parking bays')} free and ${pl(reqs.length, 'guest request', 'guest requests')} open.`;
     D.kpis = [{ label: 'Transfers today', value: todayTrips.length }, { label: 'Waiting for a driver', value: trips.filter((t) => ['requested', 'confirmed'].includes(t.status)).length, tone: 'warn' }, { label: 'Parking free', value: slots.filter((x) => x.status === 'free').length, hint: `of ${slots.length}`, tone: 'ok' }, { label: 'Guest requests open', value: reqs.length, tone: reqs.length ? 'warn' : 'ok' }];
     D.lists.push({ title: 'Transfers today', link: '/app/e/transport_bookings?view=board', columns: ['Time', 'Guest', 'Trip', 'Status'], rows: todayTrips.sort((a, b) => a.pickup_time.localeCompare(b.pickup_time)).map((t) => [String(t.pickup_time).slice(11, 16), t.guest_name, t.type, { status: t.status }]), empty: 'No transfers today.' });
     D.lists.push({ title: 'Guest requests', link: '/app/e/guest_requests?view=board', columns: ['Room', 'Request', 'Status'], rows: reqs.map((q) => [q.room, q.type, { status: q.status }]), empty: 'All requests handled.' });
     D.charts.push({ title: 'Parking now', type: 'pie', data: toPie(count(slots, 'status'), pretty) });
-    D.actions = [{ label: 'Book a taxi', to: '/app/e/transport_bookings?new=1', icon: 'Car' }, { label: 'Parking', to: '/app/parking', icon: 'ParkingSquare' }, { label: 'Guest requests', to: '/app/e/guest_requests?view=board', icon: 'BellRing' }];
+    D.actions = [{ label: 'Book a taxi', to: '/app/e/transport_bookings?new=1', icon: 'Car' }, { label: 'Park a car', to: '/app/parking', icon: 'ParkingSquare' }, { label: 'Guest requests', to: '/app/e/guest_requests?view=board', icon: 'BellRing' }, { label: 'All trips', to: '/app/e/transport_bookings?view=board', icon: 'Bus' }];
     return D;
   }
 
@@ -184,7 +185,7 @@ function computeDashboardRaw(svc) {
     D.kpis = [{ label: 'Dirty rooms', value: sc.dirty || 0, tone: sc.dirty ? 'warn' : 'ok' }, { label: 'Being cleaned', value: sc.cleaning || 0 }, { label: 'My pending jobs', value: mine.filter((t) => t.status === 'pending').length }, { label: 'Ready rooms', value: sc.available || 0, tone: 'ok' }];
     D.lists.push({ title: 'My cleaning jobs', link: '/app/housekeeping-board', columns: ['Room', 'Task', 'Priority', 'Status'], rows: mine.map((t) => [room(t.room_id), t.task, pretty(t.priority), { status: t.status }]), empty: 'All done — nice work!' });
     D.charts.push({ title: 'Rooms by status', type: 'pie', data: toPie(sc, pretty) });
-    D.actions = [{ label: 'Open housekeeping board', to: '/app/housekeeping-board', icon: 'Sparkles' }, { label: 'Report a repair', to: '/app/e/maintenance?new=1', icon: 'Wrench' }, { label: 'Log lost item', to: '/app/e/lost_found?new=1', icon: 'Search' }];
+    D.actions = [{ label: 'See rooms to clean', to: '/app/housekeeping-board', icon: 'Sparkles' }, { label: 'Guest requests', to: '/app/e/guest_requests?view=board', icon: 'BellRing' }, { label: 'Report a repair', to: '/app/e/maintenance?new=1', icon: 'Wrench' }, { label: 'Log a lost item', to: '/app/e/lost_found?new=1', icon: 'Search' }];
     return D;
   }
 
@@ -197,7 +198,7 @@ function computeDashboardRaw(svc) {
       D.charts.push({ title: 'Live tickets by station', type: 'bar', data: toPie(count(live, 'station')).map((x) => ({ name: x.name, Tickets: x.value })), series: [{ key: 'Tickets', label: 'Tickets' }] });
       D.lists.push({ title: 'Low ingredients', link: '/app/e/ingredients', columns: ['Ingredient', 'In stock', 'Reorder at'], rows: r.lowIng.map((i) => [i.name, `${i.stock} ${i.unit}`, `${i.reorder} ${i.unit}`]), empty: 'Kitchen stock is fine.' });
       D.charts.push({ title: 'Most cooked today', type: 'hbar', data: topItems(r.orders.filter((o) => day(o.date) === today())), series: [{ key: 'value', label: 'Portions' }] });
-      D.actions = [{ label: 'Open kitchen display', to: '/app/kitchen-display', icon: 'ChefHat' }, { label: 'Recipes', to: '/app/e/recipes', icon: 'BookOpen' }, { label: 'Mark item unavailable', to: '/app/e/menu_items', icon: 'Ban' }];
+      D.actions = [{ label: 'See new kitchen orders', to: '/app/kitchen-display', icon: 'ChefHat' }, { label: 'Mark a dish sold out', to: '/app/e/menu_items', icon: 'Ban' }, { label: 'Check kitchen stock', to: '/app/e/ingredients', icon: 'PackageSearch' }, { label: 'Recipes', to: '/app/e/recipes', icon: 'BookOpen' }];
       return D;
     }
     if (type === 'waiter') {
@@ -209,7 +210,7 @@ function computeDashboardRaw(svc) {
       D.lists.push({ title: 'Ready to serve now', link: '/app/service-board', columns: ['Table', 'Order', 'Items'], rows: ready.map((o) => [table(o.table_id), o.number, o.items.length]), empty: 'Nothing waiting at the pass.' });
       D.lists.push({ title: 'Table bookings today', link: '/app/e/table_reservations', columns: ['Time', 'Guest', 'Guests', 'Table'], rows: R('table_reservations').filter((x) => x.date === today() && x.status === 'booked').sort((a, b) => a.time.localeCompare(b.time)).map((x) => [x.time, x.customer_name, x.guests, table(x.table_id)]), empty: 'No bookings today.' });
       D.lists.push({ title: 'Waitlist', link: '/app/e/waitlist', columns: ['Guest', 'Party', 'Quoted'], rows: R('waitlist').filter((w) => w.status === 'waiting').map((w) => [w.customer_name, w.guests, w.quoted_minutes + ' min']), empty: 'Nobody waiting.' });
-      D.actions = [{ label: 'Tables & floor', to: '/app/floor-plan', icon: 'LayoutGrid' }, { label: 'Take an order', to: '/app/restaurant-pos', icon: 'MonitorSmartphone' }, { label: 'Add to waitlist', to: '/app/e/waitlist?new=1', icon: 'Clock' }];
+      D.actions = [{ label: 'Take an order', to: '/app/restaurant-pos', icon: 'MonitorSmartphone' }, { label: 'Dishes ready & table calls', to: '/app/service-board', icon: 'BellRing' }, { label: 'See all tables', to: '/app/floor-plan', icon: 'LayoutGrid' }, { label: 'Add guest to waitlist', to: '/app/e/waitlist?new=1', icon: 'Clock' }];
       return D;
     }
     if (type === 'cashier') {
@@ -219,7 +220,7 @@ function computeDashboardRaw(svc) {
       D.kpis = [{ label: 'Restaurant takings today', value: r.salesToday, fmt: 'money' }, s && { label: 'Shop takings today', value: s.salesToday, fmt: 'money' }, { label: 'Bills to settle', value: r.open.filter((o) => ['served', 'ready'].includes(o.status)).length, tone: 'warn' }, s && { label: 'Held sales', value: s.sales.filter((x) => x.status === 'held').length }].filter(Boolean);
       D.charts.push({ title: 'Payment methods today', type: 'pie', data: toPie(sumByKey(all, (x) => x.m || 'Other', (x) => x.t)), fmt: 'money' });
       D.lists.push({ title: 'Tables waiting to pay', link: '/app/restaurant-pos', columns: ['Table', 'Order', 'Amount', 'Status'], rows: r.open.filter((o) => ['served', 'ready'].includes(o.status) || r.tables.find((t) => t.id === o.table_id)?.status === 'bill_requested').map((o) => [table(o.table_id), o.number, { money: o.total }, { status: o.status }]), empty: 'No open bills.' });
-      D.actions = [{ label: 'Restaurant POS', to: '/app/restaurant-pos', icon: 'MonitorSmartphone' }, s && { label: 'Shop POS', to: '/app/shop-pos', icon: 'ScanBarcode' }, s && { label: 'Process a return', to: '/app/e/shop_returns', icon: 'Undo2' }].filter(Boolean);
+      D.actions = [{ label: 'Take payment for a table', to: '/app/restaurant-pos', icon: 'MonitorSmartphone' }, { label: 'Guest room bills', to: '/app/guest-billing', icon: 'Receipt' }, { label: 'See all tables', to: '/app/floor-plan', icon: 'LayoutGrid' }];
       return D;
     }
     // restaurant manager
@@ -233,7 +234,7 @@ function computeDashboardRaw(svc) {
     D.charts.push({ title: 'Top dishes', type: 'hbar', data: topItems(paid30), series: [{ key: 'value', label: 'Portions' }] });
     if (r.lowIng.length) D.alerts.push({ text: `${r.lowIng.length} ingredients below reorder level`, to: '/app/e/ingredients', tone: 'warn' });
     const unavailable = R('menu_items').filter((m) => m.available === false).length; if (unavailable) D.alerts.push({ text: `${unavailable} menu items are marked unavailable`, to: '/app/e/menu_items', tone: 'info' });
-    D.actions = [{ label: 'Restaurant POS', to: '/app/restaurant-pos', icon: 'MonitorSmartphone' }, { label: 'Tables & floor', to: '/app/floor-plan', icon: 'LayoutGrid' }, { label: 'Kitchen display', to: '/app/kitchen-display', icon: 'ChefHat' }, { label: 'Edit menu', to: '/app/e/menu_items', icon: 'BookOpen' }, { label: 'QR codes', to: '/app/qr-codes', icon: 'QrCode' }, { label: 'Reports', to: '/app/restaurant-reports', icon: 'PieChart' }];
+    D.actions = [{ label: 'Take an order', to: '/app/restaurant-pos', icon: 'MonitorSmartphone' }, { label: 'See all tables', to: '/app/floor-plan', icon: 'LayoutGrid' }, { label: 'Kitchen orders', to: '/app/kitchen-display', icon: 'ChefHat' }, { label: 'Change the menu', to: '/app/e/menu_items', icon: 'BookOpen' }, { label: 'Print table QR codes', to: '/app/qr-codes', icon: 'QrCode' }, { label: 'Sales report', to: '/app/restaurant-reports', icon: 'PieChart' }];
     return D;
   }
 
@@ -246,7 +247,7 @@ function computeDashboardRaw(svc) {
         D.kpis = [{ label: 'Kitchen items low', value: ing.length, tone: ing.length ? 'warn' : 'ok' }, { label: 'Bar items low', value: bar.length, tone: bar.length ? 'warn' : 'ok' }, { label: 'Orders on the way', value: pos.length }, { label: 'Store transfers pending', value: R('transfers').filter((t) => t.status !== 'received').length }];
         D.lists.push({ title: 'Kitchen stock to reorder', link: '/app/e/ingredients', columns: ['Item', 'In stock', 'Reorder at'], rows: ing.map((i) => [i.name, `${i.stock} ${i.unit}`, `${i.reorder} ${i.unit}`]), empty: 'Kitchen stock is fine.' });
         D.lists.push({ title: 'Purchase orders to receive', link: '/app/e/purchase_orders', columns: ['PO', 'Supplier', 'Expected'], rows: pos.map((p) => [p.number, R('vendors').find((v) => v.id === p.vendor_id)?.name, { date: p.expected }]), empty: 'Nothing pending.' });
-        D.actions = [{ label: 'Stock levels', to: '/app/stock-levels', icon: 'PackageSearch' }, { label: 'Receive goods', to: '/app/e/purchase_orders', icon: 'Truck' }, { label: 'New purchase order', to: '/app/e/purchase_orders?new=1', icon: 'PackagePlus' }];
+        D.actions = [{ label: 'Goods arrived — receive them', to: '/app/e/purchase_orders', icon: 'Truck' }, { label: 'Order from a supplier', to: '/app/e/purchase_orders?new=1', icon: 'PackagePlus' }, { label: 'What is running low', to: '/app/stock-levels', icon: 'PackageSearch' }];
         return D; }
       D.summary = `${s.low.length} products need reordering, ${s.expiring.length} batches expire within 30 days and ${pos.length} purchase orders are on the way.`;
       D.kpis = [{ label: 'Low stock items', value: s.low.length, tone: s.low.length ? 'warn' : 'ok' }, { label: 'Expiring batches', value: s.expiring.length, tone: s.expiring.length ? 'bad' : 'ok' }, { label: 'Orders on the way', value: pos.length }, { label: 'Transfers in transit', value: R('transfers').filter((t) => t.status === 'in_transit').length }];
@@ -275,14 +276,14 @@ function computeDashboardRaw(svc) {
     const pay = sum(bills.filter((i) => !['paid', 'draft'].includes(i.status)), (i) => i.total - (i.paid || 0));
     const bank = sum(R('bank_accounts'), 'balance');
     const pl = profitLoss(svc, 'month');
-    D.summary = `Customers owe you ${M(recv)} and you owe suppliers ${M(pay)}. Profit over the last 30 days: ${M(pl.net)}.`;
+    D.summary = `Customers owe you ${M(recv)} and you owe suppliers ${M(pay)}. Open Profit & loss for the full picture of income and costs.`;
     D.kpis = [{ label: 'Cash & bank', value: bank, fmt: 'money' }, { label: 'Receivables', value: recv, fmt: 'money' }, { label: 'Payables', value: pay, fmt: 'money' }, { label: 'Income (30d)', value: pl.income, fmt: 'money' }, { label: 'Net profit (30d)', value: pl.net, fmt: 'money', tone: pl.net >= 0 ? 'ok' : 'bad' }];
     const months = lastMonths(6);
     D.charts.push({ title: 'Income vs expenses', type: 'bar', data: months.map((m) => { const p = profitLoss(svc, 'range', m + '-01', m + '-31'); return { name: monthLabel(m), Income: round(p.income), Expenses: round(p.expense) }; }), series: [{ key: 'Income', label: 'Income' }, { key: 'Expenses', label: 'Expenses' }], fmt: 'money', span: 2 });
     D.charts.push({ title: 'Expenses by category (30d)', type: 'pie', data: pl.expenseLines.map((l) => ({ name: l.name, value: round(l.amount) })), fmt: 'money' });
     D.lists.push({ title: 'Unpaid invoices', link: '/app/e/sales_invoices', columns: ['Invoice', 'Customer', 'Due', 'Amount due', 'Status'], rows: inv.filter((i) => !['paid', 'draft'].includes(i.status)).sort((a, b) => a.due_date.localeCompare(b.due_date)).slice(0, 8).map((i) => [i.number, cust(i.customer_id), { date: i.due_date }, { money: i.total - (i.paid || 0) }, { status: i.due_date < today() ? 'overdue' : i.status }]) });
     D.lists.push({ title: 'Bills to pay', link: '/app/e/purchase_invoices', columns: ['Bill', 'Supplier', 'Due', 'Amount due'], rows: bills.filter((i) => !['paid', 'draft'].includes(i.status)).slice(0, 8).map((i) => [i.number, R('vendors').find((v) => v.id === i.vendor_id)?.name, { date: i.due_date }, { money: i.total - (i.paid || 0) }]) });
-    D.actions = [{ label: 'New invoice', to: '/app/e/sales_invoices?new=1', icon: 'Receipt' }, { label: 'Record expense', to: '/app/e/expenses?new=1', icon: 'Wallet' }, { label: 'Profit & loss', to: '/app/profit-loss', icon: 'TrendingUp' }, { label: 'Balance sheet', to: '/app/balance-sheet', icon: 'FileSpreadsheet' }, { label: 'Tax report', to: '/app/tax-report', icon: 'Percent' }];
+    D.actions = [{ label: 'Record an expense', to: '/app/e/expenses?new=1', icon: 'Wallet' }, { label: 'Pay a supplier bill', to: '/app/e/purchase_invoices', icon: 'Receipt' }, { label: 'Guest room bills', to: '/app/guest-billing', icon: 'ConciergeBell' }, { label: 'Profit & loss', to: '/app/profit-loss', icon: 'TrendingUp' }, { label: 'VAT report', to: '/app/tax-report', icon: 'Percent' }];
     return D;
   }
 
@@ -297,7 +298,7 @@ function computeDashboardRaw(svc) {
     D.lists.push({ title: 'Leave waiting for approval', link: '/app/e/leave_applications', columns: ['Employee', 'Type', 'From', 'Days'], rows: pend.map((l) => [emp(l.employee_id), R('leave_types').find((t) => t.id === l.leave_type_id)?.name, { date: l.start }, l.days]), empty: 'No pending requests.' });
     D.lists.push({ title: 'Recruitment pipeline', link: '/app/e/candidates', columns: ['Stage', 'Candidates'], rows: Object.entries(count(R('candidates'), 'stage')).map(([k, v]) => [pretty(k), v]) });
     D.lists.push({ title: 'Upcoming holidays', link: '/app/e/holidays', columns: ['Holiday', 'Date'], rows: R('holidays').filter((h) => h.date >= today()).sort((a, b) => a.date.localeCompare(b.date)).slice(0, 5).map((h) => [h.name, { date: h.date }]) });
-    D.actions = [{ label: 'Add employee', to: '/app/e/employees?new=1', icon: 'UserPlus' }, { label: 'Run payroll', to: '/app/run-payroll', icon: 'Banknote' }, { label: 'Attendance', to: '/app/e/attendance', icon: 'Clock' }, { label: 'Post a job', to: '/app/e/jobs?new=1', icon: 'Briefcase' }];
+    D.actions = [{ label: 'Approve leave', to: '/app/e/leave_applications', icon: 'CalendarCheck' }, { label: 'Who is at work today', to: '/app/e/attendance', icon: 'Clock' }, { label: 'Make the duty roster', to: '/app/e/rosters', icon: 'CalendarDays' }, { label: 'Pay salaries', to: '/app/run-payroll', icon: 'Banknote' }, { label: 'Add a staff member', to: '/app/e/employees?new=1', icon: 'UserPlus' }];
     return D;
   }
 
@@ -347,7 +348,7 @@ function computeDashboardRaw(svc) {
     D.kpis = [{ label: 'Today', value: att?.clock_in ? (att.clock_out ? 'Clocked out' : 'At work since ' + att.clock_in) : 'Not clocked in', fmt: 'text', tone: att?.clock_in ? 'ok' : 'warn' }, { label: 'Annual leave left', value: (annual?.days || 0) - usedAnnual, hint: 'days' }, { label: 'Last net pay', value: slip?.net || 0, fmt: 'money', hint: slip?.month }, { label: 'Announcements', value: R('announcements').length }];
     D.lists.push({ title: 'Announcements', link: '/app/e/announcements', columns: ['Title', 'Until'], rows: R('announcements').map((a) => [a.title, { date: a.end }]) });
     D.lists.push({ title: 'Upcoming holidays', link: '/app/e/holidays', columns: ['Holiday', 'Date'], rows: R('holidays').filter((h) => h.date >= t).sort((a, b) => a.date.localeCompare(b.date)).slice(0, 4).map((h) => [h.name, { date: h.date }]) });
-    D.actions = [{ label: att?.clock_in && !att?.clock_out ? 'Clock out' : 'Clock in', to: '/app/my-attendance', icon: 'Clock' }, { label: 'Apply for leave', to: '/app/my-leaves', icon: 'Plane' }, { label: 'My payslips', to: '/app/my-payslips', icon: 'Wallet' }];
+    D.actions = [{ label: att?.clock_in && !att?.clock_out ? 'Clock out (going home)' : 'Clock in (starting work)', to: '/app/my-attendance', icon: 'Clock' }, { label: 'Ask for leave', to: '/app/my-leaves', icon: 'Plane' }, { label: 'See my salary slip', to: '/app/my-payslips', icon: 'Wallet' }];
     return D;
   }
 

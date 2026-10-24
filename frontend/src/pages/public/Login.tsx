@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Eye, EyeOff, LogIn, Hotel, UtensilsCrossed, Store, Building2, Check, ArrowRight } from 'lucide-react';
+import { Eye, EyeOff, LogIn, Hotel, UtensilsCrossed, Store, Building2, Check, ArrowRight, ArrowLeft, Leaf } from 'lucide-react';
 import { DEMO_USERS, DEMO_PASSWORD, DEFAULT_ROLES } from '@shared/roles.js';
 import { useAuth } from '@/lib/auth';
 import { useAsync } from '@/lib/hooks';
@@ -18,46 +18,53 @@ const GROUPS: [string, (u: any) => boolean][] = [
 export function Login() {
   const { login } = useAuth(); const nav = useNavigate();
   const [email, setEmail] = useState(''); const [pw, setPw] = useState(''); const [show, setShow] = useState(false);
-  const [err, setErr] = useState(''); const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState(''); const [busy, setBusy] = useState(false); const [demo, setDemo] = useState('');
   const go = async (e?: string, p?: string) => {
     setErr(''); setBusy(true);
     try { await login(e ?? email, p ?? pw); nav('/app/dashboard'); } catch (x: any) { setErr(x.message); } finally { setBusy(false); }
   };
   const roleOf = (k: string) => DEFAULT_ROLES.find((r: any) => r.key === k);
+  const serif = { fontFamily: '"Cormorant Garamond", Georgia, serif' };
+  const showDemo = MODE === 'demo' || import.meta.env.VITE_SHOW_DEMO_LOGINS === 'true';
   return (
-    <div className="grid min-h-screen lg:grid-cols-[1fr_1.1fr]">
-      <div className="relative hidden overflow-hidden bg-side p-10 text-white lg:sticky lg:top-0 lg:flex lg:h-screen lg:flex-col">
-        <Link to="/" className="flex items-center gap-3"><img src="/favicon.svg" alt="" className="h-10 w-10" /><span className="leading-tight"><span className="block text-2xl font-semibold" style={{ fontFamily: '"Cormorant Garamond", Georgia, serif' }}>Ceylon Ayu Resort</span><span className="block text-[11px] uppercase tracking-[0.25em] text-side-text">Kandy · Hotel & restaurant system</span></span></Link>
-        <div className="my-auto max-w-md">
-          <img src="/images/room-deluxe.webp" alt="" className="mb-6 h-40 w-full rounded-t-[120px] object-cover opacity-90" /><h1 className="text-4xl font-bold leading-tight tracking-tight">Every room, table and kitchen ticket — in one place.</h1>
-          <p className="mt-4 text-side-text">Each team member sees only what their job needs — reception sees rooms, a waiter sees tables, the chef sees tickets, the owner sees everything.</p>
-          <ul className="mt-8 space-y-3 text-sm">{[[Hotel, 'Front desk, bookings, billing, channel manager'], [UtensilsCrossed, 'Restaurant POS, KOT, kitchen display, QR ordering'], [Store, 'Room service, guest requests, taxis, parking'], [Building2, 'Accounts, stores, HR & payroll']].map(([I, t]: any) => <li key={t} className="flex items-center gap-3"><span className="grid h-8 w-8 place-items-center rounded-lg bg-white/10"><I className="h-4 w-4" /></span>{t}</li>)}</ul>
+    <div className="grid min-h-screen lg:grid-cols-2" style={{ background: '#F6F1E7' }}>
+      <div className="relative hidden overflow-hidden lg:block" style={{ background: 'linear-gradient(160deg,#0E2A22 0%,#1F4A38 60%,#3C6B4E 100%)' }}>
+        <div className="absolute -right-24 top-20 h-80 w-80 rounded-full" style={{ background: 'radial-gradient(circle,#F3CF7E 0%,rgba(232,176,74,0.25) 45%,transparent 70%)' }} aria-hidden />
+        <svg viewBox="0 0 800 300" preserveAspectRatio="none" className="absolute inset-x-0 bottom-0 h-56 w-full" aria-hidden><path d="M0 160 C120 110 220 140 330 100 S540 80 640 120 S760 100 800 110 L800 300 L0 300Z" fill="#24493A" /><path d="M0 220 C160 180 300 220 430 190 S650 170 800 200 L800 300 L0 300Z" fill="#17352A" /></svg>
+        <div className="relative flex h-full flex-col justify-between p-12 text-[#F6F1E7]">
+          <Link to="/" className="flex items-center gap-3"><span className="grid h-12 w-12 place-items-center rounded-full bg-white/10 text-[#F3E3B8]"><Leaf className="h-6 w-6" /></span><span className="leading-tight"><span className="block text-3xl font-semibold" style={serif}>Ceylon Ayu</span><span className="block text-[11px] font-semibold uppercase tracking-[0.3em] text-white/70">Resort · Kandy</span></span></Link>
+          <div className="max-w-md pb-24">
+            <div className="mb-8 overflow-hidden rounded-t-[999px] border-2 border-[#E9C77E66] shadow-2xl" style={{ aspectRatio: '5 / 4' }}><img src="/images/room-deluxe.webp" alt="" className="h-full w-full object-cover" /></div>
+            <h1 className="text-5xl font-semibold leading-tight" style={serif}>Welcome to work.</h1>
+            <p className="mt-3 text-lg text-white/80">Sign in to see today’s rooms, tables and tasks. Your screen shows only what your job needs.</p>
+          </div>
         </div>
-        <div className="absolute -bottom-24 -right-24 h-80 w-80 rounded-full bg-saffron/20 blur-3xl" aria-hidden />
       </div>
-      <div className="flex flex-col justify-center px-5 py-10 sm:px-10">
-        <div className="mx-auto w-full max-w-xl">
-          <Link to="/" className="mb-8 flex items-center gap-2 lg:hidden"><img src="/favicon.svg" alt="" className="h-8 w-8" /><b>NexaERP</b></Link>
-          <h2 className="text-2xl font-bold">Sign in</h2>
-          <p className="mt-1 text-sm text-muted">Use the email and password your administrator gave you.</p>
-          <form className="mt-6 space-y-4" onSubmit={(e) => { e.preventDefault(); go(); }}>
-            <div><label className="label" htmlFor="email">Email</label><input id="email" className="input h-11" type="email" autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)} required /></div>
-            <div><label className="label" htmlFor="pw">Password</label><div className="relative"><input id="pw" className="input h-11 pr-10" type={show ? 'text' : 'password'} autoComplete="current-password" value={pw} onChange={(e) => setPw(e.target.value)} required /><button type="button" onClick={() => setShow(!show)} className="absolute right-3 top-3 text-muted" aria-label={show ? 'Hide password' : 'Show password'}>{show ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}</button></div></div>
-            {err && <div className="rounded-lg bg-bad/10 px-3 py-2 text-sm text-bad" role="alert">{err}</div>}
-            <button className="btn-primary h-11 w-full text-base" disabled={busy}><LogIn className="h-4 w-4" />{busy ? 'Signing in…' : 'Sign in'}</button>
+      <div className="flex flex-col justify-center px-6 py-10 sm:px-12">
+        <div className="mx-auto w-full max-w-md">
+          <Link to="/" className="mb-10 inline-flex items-center gap-2 text-base font-semibold text-[#1F3B2D] hover:underline"><ArrowLeft className="h-5 w-5" />Back to the website</Link>
+          <h2 className="text-4xl font-semibold text-[#1B231E]" style={serif}>Staff sign in</h2>
+          <p className="mt-2 text-base text-[#5B6B75]">Use the email and password your manager gave you.</p>
+          <form className="mt-8 space-y-5" onSubmit={(e) => { e.preventDefault(); go(); }}>
+            <div><label className="mb-1.5 block text-base font-semibold" htmlFor="email">Email</label><input id="email" className="input h-14 rounded-xl text-lg" type="email" autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)} required placeholder="name@ceylonayu.lk" /></div>
+            <div><label className="mb-1.5 block text-base font-semibold" htmlFor="pw">Password</label><div className="relative"><input id="pw" className="input h-14 rounded-xl pr-14 text-lg" type={show ? 'text' : 'password'} autoComplete="current-password" value={pw} onChange={(e) => setPw(e.target.value)} required /><button type="button" onClick={() => setShow(!show)} className="absolute right-2 top-2 grid h-10 w-10 place-items-center rounded-lg text-[#5B6B75] hover:bg-black/5" aria-label={show ? 'Hide password' : 'Show password'}>{show ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}</button></div></div>
+            {err && <div className="rounded-xl bg-bad/10 px-4 py-3 text-base text-bad" role="alert">{err}</div>}
+            <button className="flex h-14 w-full items-center justify-center gap-2 rounded-xl text-lg font-semibold text-white shadow-md disabled:opacity-60" style={{ background: '#1F3B2D' }} disabled={busy}><LogIn className="h-5 w-5" />{busy ? 'Signing in…' : 'Sign in'}</button>
           </form>
-          {MODE === 'demo' || import.meta.env.VITE_SHOW_DEMO_LOGINS === 'true' ? (
-            <div className="mt-8">
-              <div className="flex items-center gap-3"><div className="h-px flex-1 bg-line" /><span className="text-xs font-semibold text-muted">Or try a demo role — one click</span><div className="h-px flex-1 bg-line" /></div>
-              <div className="mt-4 space-y-4">
-                {GROUPS.map(([g, f]) => { const us = DEMO_USERS.filter(f); return (
-                  <div key={g}><div className="mb-1.5 text-xs font-semibold text-muted">{g}</div>
-                    <div className="grid gap-2 sm:grid-cols-2">{us.map((u: any) => <button key={u.email} disabled={busy} onClick={() => go(u.email, u.password || DEMO_PASSWORD)} className="flex items-center gap-2.5 rounded-lg border border-line bg-surface p-2.5 text-left hover:border-brand hover:shadow-card"><Avatar name={u.name} size="sm" color={roleOf(u.role)?.color} /><span className="min-w-0"><span className="block truncate text-sm font-semibold">{roleOf(u.role)?.name}</span><span className="block truncate text-xs text-muted">{u.name}</span></span></button>)}</div>
-                  </div>); })}
+          {showDemo && (
+            <div className="mt-8 rounded-2xl border border-[#1F3B2D1A] bg-white p-5 shadow-sm">
+              <div className="text-base font-semibold">Try the demo</div>
+              <p className="mt-1 text-sm text-[#5B6B75]">Pick a job role to see that person’s screens.</p>
+              <div className="mt-3 flex gap-2">
+                <select className="input h-12 flex-1 rounded-xl text-base" value={demo} onChange={(e) => setDemo(e.target.value)} aria-label="Demo role">
+                  <option value="">Choose a role…</option>
+                  {GROUPS.map(([g, f]) => <optgroup key={g} label={g}>{DEMO_USERS.filter(f).map((u: any) => <option key={u.email} value={u.email}>{roleOf(u.role)?.name} — {u.name}</option>)}</optgroup>)}
+                </select>
+                <button type="button" disabled={!demo || busy} onClick={() => { const u = DEMO_USERS.find((x: any) => x.email === demo); go(u.email, u.password || DEMO_PASSWORD); }} className="h-12 rounded-xl px-5 text-base font-semibold text-[#1B231E] disabled:opacity-50" style={{ background: '#E9C77E' }}>Open</button>
               </div>
-              <p className="mt-4 text-xs text-muted">All demo passwords are <code className="rounded bg-paper px-1">{DEMO_PASSWORD}</code> (owner / super admin: <code className="rounded bg-paper px-1">Admin@1234</code>). <Link to="/" className="text-brand underline">← Back to the website</Link></p>
+              <p className="mt-3 text-xs text-[#5B6B75]">Demo passwords: <code className="rounded bg-[#F6F1E7] px-1">{DEMO_PASSWORD}</code> · Owner: <code className="rounded bg-[#F6F1E7] px-1">Admin@1234</code></p>
             </div>
-          ) : null}
+          )}
         </div>
       </div>
     </div>

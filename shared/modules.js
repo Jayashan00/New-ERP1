@@ -86,6 +86,21 @@ export const MODULES = [
   },
 ];
 
+// Everyday tasks stay in the menu; everything else sits behind "More" so the menu stays short.
+const PRIMARY = {
+  hotel: ['front-desk', 'new-booking', 'room-chart', 'reservations', 'customers', 'guest-billing', 'night-audit'],
+  distribution: ['booking-engine', 'channel-manager', 'travel_agents', 'rate_plans'],
+  rooms: ['housekeeping-board', 'rooms', 'room-qr', 'maintenance'],
+  guestservices: ['guest_requests', 'transport_bookings', 'parking'],
+  restaurant: ['restaurant-pos', 'floor-plan', 'service-board', 'kitchen-display', 'table_reservations', 'restaurant_orders', 'menu_items'],
+  customers: ['feedback', 'promotions'],
+  purchase: ['purchase_orders', 'grns', 'vendors', 'stock-levels'],
+  accounting: ['accounting-dashboard', 'expenses', 'profit-loss', 'bank_accounts'],
+  hrm: ['hrm-dashboard', 'employees', 'attendance', 'rosters', 'leave_applications', 'run-payroll'],
+  admin: ['users', 'roles', 'settings', 'website'],
+};
+for (const m of MODULES) { const keep = PRIMARY[m.key]; if (!keep) continue; for (const it of m.items) it.more = !keep.includes(it.type === 'entity' ? it.entity : it.page); }
+
 export const BUSINESS_MODULE_KEYS = ['hotel', 'restaurant', 'purchase', 'inventory', 'accounting', 'hrm', 'recruitment'];
 
 export const permKeyOf = (item) => (item.type === 'entity' ? item.entity : 'page:' + item.page);

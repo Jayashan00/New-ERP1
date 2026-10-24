@@ -41,7 +41,9 @@ export function ErrorBox({ error, onRetry }: { error: any; onRetry?: () => void 
 }
 
 export function PageHeader({ title, desc, icon, actions, help }: { title: string; desc?: string; icon?: string; actions?: ReactNode; help?: ReactNode }) {
-  const [open, setOpen] = useState(false);
+  const seenKey = 'help-seen:' + title;
+  const [open, setOpen] = useState(() => !!help && !localStorage.getItem(seenKey));
+  const close = () => { setOpen(false); localStorage.setItem(seenKey, '1'); };
   return (
     <div className="mb-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -50,14 +52,14 @@ export function PageHeader({ title, desc, icon, actions, help }: { title: string
           <div className="min-w-0">
             <h1 className="flex items-center gap-2 text-xl font-bold tracking-tight sm:text-2xl">
               {title}
-              {help && <button onClick={() => setOpen(!open)} className="text-muted hover:text-brand" aria-label="How this page works" title="How this page works"><HelpCircle className="h-4 w-4" /></button>}
+              {help && <button onClick={() => (open ? close() : setOpen(true))} className="inline-flex items-center gap-1 rounded-full border border-line px-2.5 py-1 text-xs font-semibold text-muted hover:border-brand hover:text-brand" aria-label="How this page works"><HelpCircle className="h-3.5 w-3.5" />How to use</button>}
             </h1>
             {desc && <p className="mt-0.5 max-w-3xl text-sm text-muted">{desc}</p>}
           </div>
         </div>
         {actions && <div className="no-print flex flex-wrap items-center gap-2">{actions}</div>}
       </div>
-      {help && open && <div className="anim-pop mt-3 rounded-xl border border-brand/20 bg-brand-soft/60 p-4 text-sm leading-relaxed">{help}</div>}
+      {help && open && <div className="anim-pop mt-3 flex items-start gap-3 rounded-xl border border-brand/20 bg-brand-soft/60 p-4 text-[15px] leading-relaxed"><HelpCircle className="mt-0.5 h-5 w-5 shrink-0 text-brand" /><div className="flex-1">{help}</div><button onClick={close} className="btn-primary btn-sm shrink-0">Got it</button></div>}
     </div>
   );
 }

@@ -24,8 +24,16 @@ A complete hotel + restaurant system with a public website, built only for hotel
 
 **Every role has its own dashboard** with a plain-language summary of today, alerts, figures, lists and quick actions.
 
+## Made for everyday staff
+- Each menu shows only the everyday tasks; less-used screens are under **+ More options**.
+- Every dashboard starts with big **“What would you like to do?”** buttons written as plain actions (“Check a guest in”, “Take an order”, “Pay salaries”).
+- **A / A+ / A++** button in the top bar makes all text bigger.
+- Each screen shows short **How to use** steps the first time, with a **Got it** button.
+- The demo has just one or two examples of each activity, so nothing is confusing. The hotel’s set-up (18 rooms, menu, 18 tables, 24 parking bays, staff logins) is complete.
+- 3D restaurant built with **three.js + GSAP**: real lighting and shadows, tap a table to choose it, drag to look around, “Reset view” and “From above”.
+
 ## Structure
 `frontend/` React website & ERP (deploy to Vercel) · `shared/` all business rules · `backend/` Node API for phase 2.
 
 ## Checks run
-TypeScript + production build ✔ · 48 logic tests ✔ · 17 API tests ✔ · every menu page for all 16 logins in a real browser (~640 visits, 0 errors) ✔ · live workflow: room QR order → chef → waiter → room bill, table call, parking, walk-in booking with ID, channel push ✔
+TypeScript + production build ✔ · 48 logic tests ✔ · every menu page (including “More options”) for all 16 logins in a real browser (638 visits, 0 errors) ✔ · live workflow: room QR order → chef → waiter → room bill, table call, parking, walk-in booking with ID, channel push ✔

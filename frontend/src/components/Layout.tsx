@@ -40,6 +40,7 @@ function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   const { me } = useAuth();
   const activeModule = menu.find((m: any) => m.items.some((it: any) => loc.pathname.startsWith(pathOf(it))))?.key;
   const [open, setOpen] = useState<Record<string, boolean>>({});
+  const [more, setMore] = useState<Record<string, boolean>>({});
   useEffect(() => { if (activeModule) setOpen((o) => ({ ...o, [activeModule]: true })); }, [activeModule]);
   const brand = me?.settings?.brand_name || me?.platform?.app_name || 'NexaERP';
   return (
@@ -61,11 +62,12 @@ function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
               )}
               {(single || isOpen) && (
                 <div className={single ? '' : 'ml-3 border-l border-white/10 pl-2'}>
-                  {m.items.map((it: any) => (
+                  {m.items.filter((it: any) => !it.more || more[m.key] || loc.pathname.startsWith(pathOf(it))).map((it: any) => (
                     <NavLink key={pathOf(it)} to={pathOf(it)} onClick={onNavigate} className={({ isActive }) => `relative flex items-center gap-2.5 rounded-lg px-2.5 py-[7px] text-[13px] transition-colors ${isActive ? 'bg-white/10 font-semibold text-white' : 'hover:bg-side-hover hover:text-white'}`}>
                       {({ isActive }) => (<>{isActive && <span className="absolute -left-[9px] top-1.5 bottom-1.5 w-[3px] rounded-full bg-saffron" />}{single && <Icon name={it.icon || m.icon} className="h-4 w-4 opacity-80" />}<span className="truncate">{it.label}</span></>)}
                     </NavLink>
                   ))}
+                  {m.items.some((it: any) => it.more) && <button onClick={() => setMore({ ...more, [m.key]: !more[m.key] })} className="flex w-full items-center gap-2 rounded-lg px-2.5 py-[7px] text-left text-[12px] font-semibold text-side-text/70 hover:bg-side-hover hover:text-white">{more[m.key] ? '− Fewer options' : `+ More options (${m.items.filter((it: any) => it.more).length})`}</button>}
                 </div>
               )}
             </div>
@@ -144,6 +146,8 @@ function Topbar({ onMenu, onSearch }: { onMenu: () => void; onSearch: () => void
   const { me, isSuper, switchBusiness, logout } = useAuth();
   const nav = useNavigate(); const toast = useToast(); const confirm = useConfirm();
   const [dark, setDark] = useState(() => document.documentElement.classList.contains('dark'));
+  const [scale, setScale] = useState(() => localStorage.getItem('ui-scale') || '17');
+  useEffect(() => { document.documentElement.style.fontSize = scale + 'px'; localStorage.setItem('ui-scale', scale); }, [scale]);
   const toggleDark = () => { const d = !dark; setDark(d); document.documentElement.classList.toggle('dark', d); localStorage.setItem('nexa-theme', d ? 'dark' : 'light'); };
   const role = me?.role;
   return (
@@ -160,6 +164,7 @@ function Topbar({ onMenu, onSearch }: { onMenu: () => void; onSearch: () => void
           </Dropdown>
         )}
         <RoleSwitcher />
+        <button className="btn-ghost px-2.5 py-2 font-bold" onClick={() => setScale(scale === '17' ? '19' : scale === '19' ? '21' : '17')} aria-label="Change text size" title="Make text bigger or smaller">{scale === '17' ? 'A' : scale === '19' ? 'A+' : 'A++'}</button>
         <button className="btn-ghost p-2" onClick={toggleDark} aria-label="Toggle dark mode">{dark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}</button>
         {me?.business && <Notifications />}
         <Dropdown button={<button className="flex items-center gap-2 rounded-lg p-1 hover:bg-paper" aria-label="Account menu"><Avatar name={me?.user?.name || '?'} color={role?.color} /><span className="hidden text-left leading-tight xl:block"><span className="block max-w-[150px] truncate text-sm font-semibold">{me?.user?.name}</span><span className="block max-w-[150px] truncate text-xs text-muted">{role?.name}</span></span></button>}>

@@ -44,9 +44,22 @@ export default function Dashboard() {
           <div className="text-sm text-side-text">{new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })} · {me?.role?.name}</div>
           <h1 className="mt-1 text-2xl font-bold tracking-tight sm:text-3xl">{d.hello}</h1>
           <p className="mt-2 max-w-3xl text-[15px] leading-relaxed text-side-text sm:text-base">{d.summary}</p>
-          {d.actions?.length > 0 && <div className="mt-5 flex flex-wrap gap-2">{d.actions.map((a: any) => <Link key={a.label} to={a.to} className="inline-flex items-center gap-2 rounded-lg bg-white/10 px-3.5 py-2 text-sm font-semibold text-white hover:bg-white/20"><Icon name={a.icon} />{a.label}</Link>)}</div>}
         </div>
       </section>
+
+      {d.actions?.length > 0 && (
+        <section aria-labelledby="todo-title">
+          <h2 id="todo-title" className="mb-3 text-lg font-bold">What would you like to do?</h2>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
+            {d.actions.map((a: any, i: number) => (
+              <Link key={a.label} to={a.to} className={`group flex min-h-[112px] flex-col justify-between rounded-2xl border-2 p-4 transition hover:-translate-y-0.5 hover:shadow-pop ${i === 0 ? 'border-brand bg-brand text-white' : 'border-line bg-surface hover:border-brand'}`}>
+                <span className={`grid h-11 w-11 place-items-center rounded-xl ${i === 0 ? 'bg-white/15' : 'bg-brand-soft text-brand'}`}><Icon name={a.icon} className="h-6 w-6" /></span>
+                <span className="mt-3 text-base font-bold leading-tight">{a.label}</span>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
 
       {d.alerts?.length > 0 && (
         <div className="grid gap-2 md:grid-cols-2">

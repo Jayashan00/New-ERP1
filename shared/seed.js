@@ -567,6 +567,7 @@ export function buildSeed() {
   }
   for (let i = 0; i < 20; i++) { const u = pick(db.users); db.login_history.push({ id: nid(), user_name: u.name, role: u.role, ip: `112.134.${ri(1, 254)}.${ri(1, 254)}`, device: pick(['Chrome on Windows', 'Safari on iPhone', 'Chrome on Android']), date: dtOff(-ri(0, 10)), status: rnd() > 0.1 ? 'success' : 'failed' }); }
   for (const b of BIZ) for (let i = 0; i < 12; i++) { const u = pick(db.users.filter((x) => x.businessId === b.id)); db.audit_log.push({ id: nid(), businessId: b.id, user_name: u.name, action: pick(['created', 'updated', 'deleted', 'checked_in', 'paid', 'approved']), entity: pick(['Reservations', 'Orders', 'Products', 'Invoices', 'Leave applications']), record: '#' + ri(1000, 9999), date: dtOff(-ri(0, 7)) }); }
+  pruneToExamples(db);
   db.platform_settings = [{ id: 'platform', data: { app_name: 'NexaERP', support_email: 'support@nexaerp.com', default_language: 'English', default_currency: 'LKR', allow_signup: true, email_verification: false, maintenance_mode: false, cookie_consent: true, cookie_text: 'We use cookies to improve your experience.', seo_title: 'NexaERP — Hotel, Restaurant & Retail ERP', seo_description: 'All-in-one ERP for hotels, restaurants, shops and companies.', storage: 'Local', cache_driver: 'file', pusher_enabled: false, gateways: Object.fromEntries(PAYMENT_GATEWAYS.map((g, i) => [g, { enabled: i < 4 || g === 'Bank transfer', mode: 'sandbox' }])) } }];
   return db;
 }
@@ -584,4 +585,94 @@ export function defaultSettings(b) {
     gateways: Object.fromEntries(PAYMENT_GATEWAYS.map((g, i) => [g, { enabled: ['Stripe', 'PayHere', 'Bank transfer'].includes(g), mode: 'sandbox', key: '', secret: '' }])),
     integrations: Object.fromEntries(INTEGRATIONS.map((x) => [x.key, { enabled: ['smtp', 'pusher'].includes(x.key), values: {} }])),
   };
+}
+
+// =====================================================================
+//  Keep the hotel's set-up (rooms, menu, tables, staff…) but only ONE or
+//  TWO clear examples of each kind of activity, so the demo is easy to read.
+// =====================================================================
+function pruneToExamples(db) {
+  const t0 = dateOff(0), tm1 = dateOff(-1);
+  const byNew = (a, b) => String(b.created_at || b.date || '').localeCompare(String(a.created_at || a.date || ''));
+  const keep = (col, fn) => { db[col] = (db[col] || []).filter(fn); };
+  const firstN = (col, n, fn = () => true) => { db[col] = (db[col] || []).filter(fn).sort(byNew).slice(0, n); };
+  // staff: only people with a login
+  const empIds = new Set(db.users.map((u) => u.employeeId).filter(Boolean));
+  keep('employees', (e) => empIds.has(e.id));
+  // reservations: 1 in-house (the guest portal guest), 1 arriving today, 1 left yesterday, 1 future website, 1 future Booking.com
+  const R = db.reservations; const emma = db.customers.find((c) => c.email === 'guest@ceylonayu.lk');
+  const pickR = (fn) => R.find(fn);
+  const inHouse = pickR((r) => r.status === 'checked_in' && r.guest_id === emma?.id) || pickR((r) => r.status === 'checked_in');
+  const arrival = pickR((r) => r.status === 'confirmed' && r.check_in === t0 && r.room_id !== inHouse?.room_id);
+  const left = pickR((r) => r.status === 'checked_out' && r.room_id !== inHouse?.room_id && r.room_id !== arrival?.room_id);
+  const future = R.filter((r) => ['confirmed', 'tentative'].includes(r.status) && r.check_in > t0 && ![inHouse, arrival, left].some((x) => x && x.room_id === r.room_id)).slice(0, 2);
+  if (left) { left.check_out = t0; left.check_in = dateOff(-2); }
+  if (future[0]) { future[0].source = 'Website'; future[0].status = 'confirmed'; }
+  if (future[1]) { future[1].source = 'Booking.com'; future[1].ota_ref = '4417820931'; future[1].status = 'confirmed'; }
+  const keepRes = new Set([inHouse, arrival, left, ...future].filter(Boolean).map((r) => r.id));
+  keep('reservations', (r) => keepRes.has(r.id));
+  for (const r of db.reservations) if (r.status !== 'checked_in') { r.parking_slot_id = ''; }
+  keep('folio_charges', (c) => keepRes.has(c.reservation_id)); keep('folio_payments', (c) => keepRes.has(c.reservation_id)); keep('registration_cards', (c) => keepRes.has(c.reservation_id));
+  // rooms: everything clean & free, except the examples
+  for (const rm of db.rooms) rm.status = 'available';
+  const roomOf = (r) => r && db.rooms.find((x) => x.id === r.room_id);
+  if (roomOf(inHouse)) roomOf(inHouse).status = 'occupied';
+  if (roomOf(arrival)) roomOf(arrival).status = 'reserved';
+  if (roomOf(left)) roomOf(left).status = 'dirty';
+  // housekeeping & maintenance: one each
+  db.housekeeping = []; if (roomOf(left)) db.housekeeping.push({ id: nid(), businessId: 'b1', created_at: dtOff(0, 11), room_id: roomOf(left).id, task: 'Checkout clean', assigned_to: db.employees.find((e) => e.name === 'Malini Jayawardena')?.id || '', priority: 'high', date: t0, notes: 'Guest left this morning', status: 'pending' });
+  firstN('maintenance', 1); if (db.maintenance[0]) { db.maintenance[0].status = 'open'; db.maintenance[0].priority = 'normal'; db.maintenance[0].issue = 'Bathroom tap is dripping'; db.maintenance[0].room_id = roomOf(inHouse)?.id || db.maintenance[0].room_id; }
+  // customers: guests of kept bookings + 2 diners
+  const custIds = new Set(db.reservations.map((r) => r.guest_id)); if (emma) custIds.add(emma.id);
+  const extra = db.customers.filter((c) => !custIds.has(c.id)).slice(0, 2); extra.forEach((c) => custIds.add(c.id));
+  keep('customers', (c) => custIds.has(c.id));
+  // restaurant: one open (waiting for chef), one ready to collect, two paid (today & yesterday)
+  const O = db.restaurant_orders;
+  const openO = O.find((o) => o.status === 'preparing' && o.table_id); const readyO = O.find((o) => o.status === 'ready' && o.table_id);
+  const paidToday = O.find((o) => o.status === 'paid' && String(o.date).slice(0, 10) === t0); const paidY = O.find((o) => o.status === 'paid' && String(o.date).slice(0, 10) === tm1 && o.type === 'room_service') || O.find((o) => o.status === 'paid' && String(o.date).slice(0, 10) === tm1);
+  const keepO = new Set([openO, readyO, paidToday, paidY].filter(Boolean).map((o) => o.id));
+  keep('restaurant_orders', (o) => keepO.has(o.id)); keep('kots', (k) => keepO.has(k.order_id));
+  for (const k of db.kots) { if (k.order_id === openO?.id) k.status = 'new'; if (k.order_id === readyO?.id) k.status = 'ready'; }
+  for (const t of db.tables) t.status = 'free';
+  for (const o of [openO, readyO]) { const t = o && db.tables.find((x) => x.id === o.table_id); if (t) t.status = 'occupied'; }
+  if (paidY && paidY.type === 'room_service' && inHouse) paidY.room_reservation_id = inHouse.id;
+  firstN('table_reservations', 1); if (db.table_reservations[0]) Object.assign(db.table_reservations[0], { date: t0, time: '19:30', status: 'booked', customer_name: 'Sanduni Perera', guests: 4, occasion: 'Birthday', table_id: db.tables.find((t) => t.status === 'free' && t.seats >= 4)?.id });
+  firstN('waitlist', 1); if (db.waitlist[0]) db.waitlist[0].status = 'waiting';
+  firstN('service_calls', 0);
+  // parking: guest car + one visitor in the log
+  keep('parking_logs', (l) => (l.status === 'parked' && l.reservation_id === inHouse?.id));
+  const visitorLog = { id: nid(), businessId: 'b1', created_at: dtOff(-1, 12), slot_id: db.parking_slots[3].id, vehicle_no: 'CAR-5521', vehicle_type: 'Car', driver: 'Restaurant guest', reservation_id: '', purpose: 'Restaurant guest', time_in: dtOff(-1, 12, 10), time_out: dtOff(-1, 14, 5), fee: 0, status: 'left' };
+  db.parking_logs.push(visitorLog);
+  for (const sl of db.parking_slots) { const lg = db.parking_logs.find((l) => l.slot_id === sl.id && l.status === 'parked'); if (sl.status !== 'out_of_service') { sl.status = lg ? 'occupied' : 'free'; sl.vehicle_no = lg ? lg.vehicle_no : ''; } }
+  if (inHouse) { const lg = db.parking_logs.find((l) => l.reservation_id === inHouse.id); inHouse.parking_slot_id = lg ? lg.slot_id : ''; inHouse.vehicle_no = lg ? lg.vehicle_no : ''; }
+  // guest services: one taxi coming up, one done; one open request, one done
+  firstN('transport_bookings', 2); db.transport_bookings.forEach((t, i) => Object.assign(t, { number: 'TR-' + (1001 + i), reservation_id: inHouse?.id || '', guest_name: db.customers.find((c) => c.id === inHouse?.guest_id)?.name || t.guest_name, status: i ? 'completed' : 'confirmed', type: i ? 'Temple of the Tooth' : 'Airport drop', pickup: 'Ceylon Ayu Resort', dropoff: i ? 'Sri Dalada Maligawa' : 'Bandaranaike Airport (BIA)', pickup_time: i ? dtOff(-1, 17, 30) : `${inHouse?.check_out || dateOff(2)}T09:00`, fare: i ? 1500 : 18500, charge_to_room: true, charged: !!i }));
+  firstN('guest_requests', 2); db.guest_requests.forEach((q, i) => Object.assign(q, { room: roomOf(inHouse)?.number || '101', guest_name: db.customers.find((c) => c.id === inHouse?.guest_id)?.name || 'Guest', type: i ? 'Drinking water' : 'Extra towels', status: i ? 'done' : 'new', priority: 'normal', source: 'Room QR', details: '', created: dtOff(0, Math.max(7, new Date().getHours() - i * 2), 5) }));
+  firstN('channel_sync_logs', 2); firstN('laundry', 1); firstN('lost_found', 1);
+  // money & stores: one of each
+  for (const c of ['purchase_orders', 'grns', 'purchase_invoices', 'purchase_returns', 'vendor_payments', 'customer_payments', 'revenues', 'bank_transactions', 'bank_transfers_internal', 'credit_notes', 'debit_notes', 'journal_entries', 'transfers', 'budgets', 'budget_allocations', 'sales_invoices', 'proposals', 'quotations', 'sales_returns']) firstN(c, 1);
+  firstN('expenses', 3);
+  // people: one of each
+  for (const c of ['leave_applications', 'announcements', 'events', 'documents', 'acknowledgments', 'awards', 'promotions_hr', 'hr_transfers', 'warnings', 'complaints', 'resignations', 'terminations', 'trainings', 'reviews', 'employee_goals', 'salary_components', 'jobs', 'candidates', 'interviews', 'assessments', 'offers', 'onboarding', 'timesheets']) firstN(c, 1);
+  const staffEmp = db.users.find((u) => u.email === 'staff@ceylonayu.lk')?.employeeId;
+  for (const e of Object.values(ENTITIES)) { const f = e.fields.find((x) => x.k === 'employee_id'); if (!f || !db[e.key] || e.key === 'attendance' || e.key === 'payslips' || e.key === 'rosters') continue; for (const r of db[e.key]) if (!empIds.has(r.employee_id)) r.employee_id = staffEmp; }
+  db.expenses.forEach((x, i) => Object.assign(x, { amount: [18500, 42000, 9600][i], category: ['Utilities', 'Food cost', 'Maintenance'][i], description: ['Electricity bill', 'Fish & vegetables from market', 'Pool cleaning'][i], date: dateOff(-i - 1), status: 'paid' }));
+  db.purchase_invoices.forEach((x) => { x.items = x.items.slice(0, 2); });
+  if (db.leave_applications[0]) Object.assign(db.leave_applications[0], { status: 'pending', start: dateOff(5), end: dateOff(6), days: 2, reason: 'Family function' });
+  keep('attendance', (a) => [t0, tm1].includes(a.date)); keep('rosters', (r) => r.date === t0);
+  const lastMonth = db.payslips.map((p) => p.month).sort().pop(); keep('payslips', (p) => p.month === db.payslips[db.payslips.length - 1].month); void lastMonth;
+  firstN('holidays', 3, (h) => h.date >= t0);
+  // guests & marketing: a few
+  firstN('feedback', 3, (f) => f.rating >= 4); db.feedback.forEach((f, i) => Object.assign(f, { comment: ['Peaceful garden and a lovely pool. Staff went out of their way for us.', 'The Kandyan rice and curry was the best we had in Sri Lanka!', 'Clean rooms, easy parking and only minutes from the temple.'][i] || f.comment, rating: 5 }));
+  for (const c of ['gift_cards', 'promotions', 'campaigns']) firstN(c, 1);
+  // logs
+  firstN('notifications', 3); firstN('messages', 2); firstN('audit_log', 4); firstN('login_history', 3);
+  db.night_audits = db.night_audits.sort((a, b) => a.date.localeCompare(b.date)).slice(-7);
+  // integrity: drop records whose required link points to something removed; clear optional broken links
+  const ids = {}; for (const [k, v] of Object.entries(db)) if (Array.isArray(v)) ids[k] = new Set(v.map((r) => r.id));
+  for (const e of Object.values(ENTITIES)) {
+    if (!db[e.key]) continue;
+    db[e.key] = db[e.key].filter((r) => e.fields.every((f) => !(f.t === 'ref' && f.req && r[f.k] && ids[f.ref] && !ids[f.ref].has(r[f.k]))));
+    for (const r of db[e.key]) for (const f of e.fields) { if (f.t === 'ref' && r[f.k] && ids[f.ref] && !ids[f.ref].has(r[f.k])) r[f.k] = ''; if (f.t === 'refs' && Array.isArray(r[f.k]) && ids[f.ref]) r[f.k] = r[f.k].filter((x) => ids[f.ref].has(x)); }
+  }
 }

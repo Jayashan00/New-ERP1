@@ -11,7 +11,7 @@ import { PrintModal, ReceiptDoc, KotDoc } from '@/components/Printable';
 import { ChartCard } from '@/components/Charts';
 import { DataTable } from '@/components/DataTable';
 import { PublicLinkCard } from '../hotel';
-import { Floor3D, FloorLegend } from '@/components/Floor3D';
+import { Restaurant3D, Legend3D } from '@/components/Restaurant3D';
 import { money, minutesSince, pretty, time, today } from '@/lib/format';
 
 const TYPES = [['dine_in', 'Dine-in'], ['takeaway', 'Takeaway'], ['delivery', 'Delivery'], ['room_service', 'Room service']];
@@ -183,7 +183,8 @@ export function FloorPlan() {
   const open = orders.data.filter((o) => !['paid', 'cancelled'].includes(o.status));
   const orderOf = (t: any) => open.find((o) => o.table_id === t.id);
   const shown = tables.data.filter((t) => area === 'all' || t.area_id === area);
-  const area3d = area === 'all' ? areas.data[0]?.id : area;
+  const busiest = [...areas.data].sort((a, b) => tables.data!.filter((t) => t.area_id === b.id && t.status !== 'free').length - tables.data!.filter((t) => t.area_id === a.id && t.status !== 'free').length)[0];
+  const area3d = area === 'all' ? busiest?.id : area;
   const toneOf = (t: any) => (t.status === 'free' ? 'free' : t.status === 'occupied' ? 'busy' : t.status === 'reserved' ? 'reserved' : t.status === 'bill_requested' ? 'alert' : 'cleaning') as any;
   const setStatus = async (t: any, status: string) => { try { await api.action('setTableStatus', { table_id: t.id, status }); toast.ok(`${t.name}: ${pretty(status)}`); setSel(null); } catch (e) { toast.err(e); } };
   const o = sel ? orderOf(sel) : null;
@@ -193,7 +194,7 @@ export function FloorPlan() {
         actions={<><div className="flex rounded-lg border border-line bg-surface p-0.5"><button className={`btn-sm btn ${view3d ? 'bg-paper text-ink' : 'text-muted'}`} onClick={() => setView3d(true)}>3D floor</button><button className={`btn-sm btn ${!view3d ? 'bg-paper text-ink' : 'text-muted'}`} onClick={() => setView3d(false)}>Grid</button></div><button className="btn-primary" onClick={() => nav('/app/restaurant-pos')}>Open POS</button></>} />
       <div className="mb-3 flex flex-wrap items-center gap-3"><Tabs value={area} onChange={setArea} tabs={[{ key: 'all', label: 'All areas' }, ...areas.data.map((a) => ({ key: a.id, label: a.name }))]} /><div className="flex flex-wrap gap-2 text-xs">{Object.keys(TABLE_STYLE).map((s) => <span key={s} className={`chip border ${TABLE_STYLE[s].replace('pulse-ring', '')}`}>{pretty(s)}</span>)}</div></div>
       <div className="grid gap-4 xl:grid-cols-[1fr_320px]">
-        {view3d ? <div className="space-y-2">{area === 'all' && <p className="text-sm text-muted">Showing <b>{areas.data[0]?.name}</b> — pick an area above to see the others.</p>}<Floor3D height={520} tables={tables.data.filter((t) => t.area_id === area3d).map((t) => { const o = orderOf(t); return { ...t, tone: toneOf(t), sub: o ? `${money(o.total, { short: true })} · ${minutesSince(o.date)}m` : `${t.seats} seats` }; })} onSelect={(t) => setSel(tables.data!.find((x) => x.id === t.id))} /><FloorLegend items={[['free', 'Free'], ['busy', 'Seated'], ['reserved', 'Reserved'], ['alert', 'Wants the bill'], ['cleaning', 'Needs clearing']]} /></div> : <div className="card grid grid-cols-2 gap-3 p-4 sm:grid-cols-4 lg:grid-cols-6">
+        {view3d ? <div className="space-y-2">{area === 'all' && <p className="text-sm text-muted">Showing <b>{busiest?.name}</b> — pick an area above to see the others.</p>}<Restaurant3D height={560} tables={tables.data.filter((t) => t.area_id === area3d).map((t) => { const o = orderOf(t); return { ...t, tone: toneOf(t), sub: o ? `${money(o.total, { short: true })} · ${minutesSince(o.date)}m` : `${t.seats} seats` }; })} onSelect={(t) => setSel(tables.data!.find((x) => x.id === t.id))} /><Legend3D tones={['free', 'busy', 'reserved', 'alert', 'cleaning']} /></div> : <div className="card grid grid-cols-2 gap-3 p-4 sm:grid-cols-4 lg:grid-cols-6">
           {shown.map((t) => { const ord = orderOf(t); return (
             <button key={t.id} onClick={() => setSel(t)} className={`relative flex aspect-square flex-col items-center justify-center border-2 p-2 text-center transition hover:scale-[1.02] ${t.shape === 'round' ? 'rounded-full' : 'rounded-2xl'} ${TABLE_STYLE[t.status]}`}>
               <span className="text-xl font-bold">{t.name}</span>
