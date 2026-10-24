@@ -11,7 +11,7 @@ import { Service, publicService, landingData, safeUser } from '@shared/service.j
 
 const API = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
 export const MODE: 'demo' | 'live' = API ? 'live' : 'demo';
-const DB_KEY = 'ceylon-ayu-erp-db-v2';
+const DB_KEY = 'ceylon-ayu-erp-db-v3';
 const SESSION_KEY = 'ceylon-ayu-session';
 
 export class HttpError extends Error { status: number; constructor(status: number, msg: string) { super(msg); this.status = status; } }

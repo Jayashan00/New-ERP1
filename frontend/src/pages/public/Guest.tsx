@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
-import { Minus, Plus, ShoppingBag, Bell, Receipt, Check, Star, BedDouble, Users, CreditCard, Search, X } from 'lucide-react';
+import { useParams, Link } from 'react-router-dom';
+import { P } from '@/lib/photos';
+import { Minus, Plus, ShoppingBag, Bell, Receipt, Check, Star, BedDouble, Users, CreditCard, Search, X, Leaf, ArrowLeft, CalendarDays, ShieldCheck, ParkingSquare, Maximize2, Snowflake, Wifi, Tv, Wine, Sun, Waves, Bath, Lock, Wind, UtensilsCrossed, Building2 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useAsync } from '@/lib/hooks';
 import { useToast } from '@/lib/toast';
@@ -10,9 +11,9 @@ import { money, today, addDays, nightsBetween, date, pretty, setCurrency } from 
 function Shell({ biz, children, sub }: { biz: any; children: any; sub?: string }) {
   useEffect(() => { if (biz?.currency) setCurrency(biz.currency); }, [biz?.currency]);
   return (
-    <div className="min-h-screen bg-paper">
-      <header className="sticky top-0 z-20 border-b border-line bg-surface/95 backdrop-blur" style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>
-        <div className="mx-auto flex max-w-5xl items-center gap-3 px-4 py-3"><span className="text-2xl">{biz?.logo}</span><div className="min-w-0"><div className="truncate font-bold">{biz?.name}</div><div className="truncate text-xs text-muted">{sub || biz?.city}</div></div></div>
+    <div className="min-h-screen" style={{ background: '#F6F1E7', color: '#1B231E' }}>
+      <header className="sticky top-0 z-20 border-b border-black/5 backdrop-blur" style={{ background: 'rgba(246,241,231,0.95)', paddingTop: 'env(safe-area-inset-top, 0px)' }}>
+        <div className="mx-auto flex max-w-5xl items-center gap-3 px-4 py-3"><Link to="/" className="grid h-10 w-10 place-items-center rounded-full text-white" style={{ background: '#1F3B2D' }} aria-label="Back to the website"><Leaf className="h-5 w-5" /></Link><div className="min-w-0"><div className="truncate text-xl font-semibold" style={SERIF}>{biz?.name || 'Ceylon Ayu Resort Kandy'}</div><div className="truncate text-xs text-black/60">{sub || biz?.city}</div></div></div>
       </header>
       <main className="mx-auto max-w-5xl px-4 py-5" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 96px)' }}>{children}</main>
     </div>
@@ -76,48 +77,122 @@ function FeedbackBox({ slug, source }: { slug: string; source: string }) {
 }
 
 // ------------------------------------------------------------------ ONLINE BOOKING
+const SERIF = { fontFamily: '"Cormorant Garamond", Georgia, serif' };
+const FOREST = '#1F3B2D', GOLD = '#D9B36A';
+const AMENITY_ICON: Record<string, any> = { AC: Snowflake, 'Wi-Fi': Wifi, TV: Tv, Minibar: Wine, Balcony: Sun, 'Sea view': Waves, Bathtub: Bath, Safe: Lock, 'Hair dryer': Wind, Kitchenette: UtensilsCrossed };
 export function BookOnline() {
   const { slug = '' } = useParams();
-  const info = useAsync<any>(() => api.pub(slug, 'info'), [slug], { live: false });
+  const site = useAsync<any>(() => api.pub(slug, 'site'), [slug], { live: false });
   const qp = new URLSearchParams(location.search);
   const [q, setQ] = useState({ check_in: qp.get('in') || addDays(today(), 1), check_out: qp.get('out') || addDays(today(), 3), guests: Number(qp.get('g') || 2) });
-  const [res, setRes] = useState<any>(null); const [pick, setPick] = useState<any>(null); const [done, setDone] = useState<any>(null);
-  const [g, setG] = useState({ name: '', email: '', phone: '', nationality: '', special_requests: '', pay_now: true, gateway: 'Stripe' });
+  const [res, setRes] = useState<any>(null); const [busy, setBusy] = useState(false); const [pick, setPick] = useState<any>(null); const [done, setDone] = useState<any>(null);
+  const [g, setG] = useState({ first: '', last: '', email: '', phone: '', country: '', arrival: '', special_requests: '', pay_now: true, gateway: 'PayHere' });
   const toast = useToast();
-  const search = async () => { try { setRes(await api.pub(slug, 'rooms', q)); setPick(null); } catch (e) { toast.err(e); } };
-  useEffect(() => { if (info.data) search(); }, [info.data]);
-  if (info.error) return <NotFound e={info.error} />;
-  if (!info.data) return <Spinner />;
-  if (done) return <Shell biz={info.data} sub="Booking confirmed"><div className="mx-auto max-w-lg rounded-2xl bg-surface p-8 text-center shadow-card"><div className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-ok/15 text-ok"><Check className="h-7 w-7" /></div><h1 className="mt-4 text-2xl font-bold">You’re booked!</h1><p className="mt-1 text-muted">Booking number <b className="text-ink">{done.number}</b></p><div className="mt-5 rounded-xl bg-paper p-4 text-left text-sm"><div>{done.room_type}</div><div>{date(done.check_in)} → {date(done.check_out)}</div><div className="mt-2 font-bold">{done.paid ? `Paid ${money(done.paid)} via ${done.gateway}` : `Pay ${money(done.total)} at the hotel`}</div></div><p className="mt-4 text-sm text-muted">Check-in from {info.data.check_in_time}. A confirmation was sent to your email.</p></div></Shell>;
+  const search = async () => { setBusy(true); try { setRes(await api.pub(slug, 'rooms', q)); setPick(null); } catch (e) { toast.err(e); } finally { setBusy(false); } };
+  useEffect(() => { if (site.data) search(); }, [site.data]);
+  if (site.error) return <NotFound e={site.error} />;
+  if (!site.data) return <Spinner />;
+  const biz = site.data.business; const w = site.data.website || {};
+  const order: string[] = site.data.rooms.map((r: any) => r.id);
+  const photo = (t: any) => w.room_photos?.[t.id] || P.rooms[Math.max(0, order.indexOf(t.id)) % P.rooms.length];
   const n = nightsBetween(q.check_in, q.check_out);
-  return (
-    <Shell biz={info.data} sub="Book direct — best price guaranteed">
-      <div className="grid gap-3 rounded-2xl bg-surface p-4 shadow-card sm:grid-cols-4">
-        <Field label="Check-in"><input type="date" className="input" min={today()} value={q.check_in} onChange={(e) => setQ({ ...q, check_in: e.target.value, check_out: e.target.value >= q.check_out ? addDays(e.target.value, 1) : q.check_out })} /></Field>
-        <Field label="Check-out"><input type="date" className="input" min={addDays(q.check_in, 1)} value={q.check_out} onChange={(e) => setQ({ ...q, check_out: e.target.value })} /></Field>
-        <Field label="Guests"><select className="input" value={q.guests} onChange={(e) => setQ({ ...q, guests: Number(e.target.value) })}>{[1, 2, 3, 4, 5, 6].map((x) => <option key={x}>{x}</option>)}</select></Field>
-        <div className="flex items-end"><button className="btn-primary h-10 w-full" onClick={search}><Search className="h-4 w-4" />Check availability</button></div>
+  const total = pick ? pick.base_rate * n : 0;
+  const book = async () => {
+    if (!g.first || !g.last || !g.email) return toast.err('Please enter your first name, last name and email.');
+    try { const r = await api.pub(slug, 'book', { room_type_id: pick.id, check_in: q.check_in, check_out: q.check_out, adults: q.guests, guest: { first_name: g.first, last_name: g.last, name: `${g.first} ${g.last}`, email: g.email, phone: g.phone, nationality: g.country, country: g.country }, special_requests: [g.arrival && `Arriving around ${g.arrival}`, g.special_requests].filter(Boolean).join('. '), pay_now: g.pay_now, gateway: g.gateway }); setDone({ ...r, photo: photo(pick) }); window.scrollTo(0, 0); } catch (e) { toast.err(e); }
+  };
+  const Header = ({ title, text }: any) => (
+    <header className="relative overflow-hidden text-white" style={{ background: '#0E2A22' }}>
+      <img src={P.hero} alt="" className="absolute inset-0 h-full w-full object-cover" /><div className="absolute inset-0" style={{ background: 'linear-gradient(90deg,rgba(10,22,17,0.88),rgba(10,22,17,0.45))' }} />
+      <div className="relative mx-auto max-w-6xl px-5 pb-24 pt-6" style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 24px)' }}>
+        <div className="flex items-center justify-between"><Link to="/" className="flex items-center gap-2.5"><span className="grid h-10 w-10 place-items-center rounded-full border border-white/40"><Leaf className="h-5 w-5 text-[#F3E3B8]" /></span><span className="leading-none"><span className="block text-2xl font-semibold" style={SERIF}>Ceylon Ayu</span><span className="mt-1 block text-[10px] font-semibold uppercase tracking-[0.3em] text-white/70">Resort · Kandy</span></span></Link><Link to="/" className="hidden items-center gap-2 text-sm font-semibold text-white/85 hover:text-white sm:flex"><ArrowLeft className="h-4 w-4" />Back to the website</Link></div>
+        <h1 className="mt-12 text-5xl font-semibold sm:text-6xl" style={SERIF}>{title}</h1><p className="mt-3 max-w-xl text-lg text-white/80">{text}</p>
       </div>
-      {res && <div className="mt-5 space-y-3">
-        <p className="text-sm text-muted">{n} night{n > 1 ? 's' : ''} · {date(q.check_in)} – {date(q.check_out)}</p>
-        {res.types.map((t: any) => <div key={t.id} className={`flex flex-col gap-4 rounded-2xl bg-surface p-4 shadow-card sm:flex-row ${pick?.id === t.id ? 'ring-2 ring-brand' : ''}`}>
-          <div className="grid h-28 shrink-0 place-items-center rounded-xl bg-brand-soft text-brand sm:w-40"><BedDouble className="h-10 w-10" /></div>
-          <div className="flex-1"><h3 className="text-lg font-bold">{t.name}</h3><p className="text-sm text-muted">{t.description}</p><div className="mt-1 flex flex-wrap gap-1">{(t.amenities || []).map((a: string) => <span key={a} className="chip bg-paper text-muted">{a}</span>)}</div><div className="mt-1 flex items-center gap-1 text-xs text-muted"><Users className="h-3.5 w-3.5" />Up to {t.max_adults} adults · {t.bed} bed · {t.size} sq ft</div></div>
-          <div className="flex shrink-0 flex-col items-end justify-between gap-2"><div className="text-right"><div className="text-2xl font-bold">{money(t.base_rate)}</div><div className="text-xs text-muted">per night · {money(t.base_rate * n)} total</div></div>{t.available ? <button className="btn-primary" onClick={() => setPick(t)}>{t.available <= 2 ? `Only ${t.available} left — ` : ''}Select</button> : <span className="chip bg-bad/10 text-bad">Sold out</span>}</div>
-        </div>)}
-        {!res.types.length && <Empty title="No rooms for that many guests" />}
-      </div>}
-      <Modal open={!!pick} onClose={() => setPick(null)} title={`Book ${pick?.name}`} footer={<button className="btn-primary w-full py-3" onClick={async () => { try { const r = await api.pub(slug, 'book', { room_type_id: pick.id, check_in: q.check_in, check_out: q.check_out, adults: q.guests, guest: { name: g.name, email: g.email, phone: g.phone, nationality: g.nationality }, special_requests: g.special_requests, pay_now: g.pay_now, gateway: g.gateway }); setDone(r); } catch (e) { toast.err(e); } }}>{g.pay_now ? <><CreditCard className="h-4 w-4" />Pay {money((pick?.base_rate || 0) * n)} & confirm</> : 'Confirm — pay at hotel'}</button>}>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <Field label="Full name" required><input className="input" value={g.name} onChange={(e) => setG({ ...g, name: e.target.value })} /></Field>
-          <Field label="Email" required><input className="input" type="email" value={g.email} onChange={(e) => setG({ ...g, email: e.target.value })} /></Field>
-          <Field label="Phone"><input className="input" value={g.phone} onChange={(e) => setG({ ...g, phone: e.target.value })} /></Field>
-          <Field label="Country"><input className="input" value={g.nationality} onChange={(e) => setG({ ...g, nationality: e.target.value })} /></Field>
-          <div className="sm:col-span-2"><Field label="Special requests"><textarea className="input" value={g.special_requests} onChange={(e) => setG({ ...g, special_requests: e.target.value })} /></Field></div>
-          <div className="space-y-2 sm:col-span-2"><label className="flex items-center gap-2 text-sm"><input type="radio" checked={g.pay_now} onChange={() => setG({ ...g, pay_now: true })} />Pay now online (secure)</label>{g.pay_now && <select className="input" value={g.gateway} onChange={(e) => setG({ ...g, gateway: e.target.value })}>{['Stripe', 'PayHere', 'PayPal'].map((x) => <option key={x}>{x}</option>)}</select>}<label className="flex items-center gap-2 text-sm"><input type="radio" checked={!g.pay_now} onChange={() => setG({ ...g, pay_now: false })} />Pay at the hotel</label></div>
+    </header>
+  );
+  if (done) return (
+    <div className="min-h-screen" style={{ background: '#F6F1E7', color: '#1B231E' }}>
+      <Header title="You’re booked!" text="Thank you for choosing Ceylon Ayu Resort. We look forward to welcoming you to Kandy." />
+      <div className="relative mx-auto -mt-14 max-w-2xl px-5 pb-16">
+        <div className="overflow-hidden rounded-[28px] bg-white shadow-xl">
+          <img src={done.photo} alt="" className="aspect-[16/7] w-full bg-[#E7E0D2] object-cover" />
+          <div className="p-7">
+            <div className="flex items-center gap-3"><span className="grid h-11 w-11 place-items-center rounded-full bg-green-100 text-green-700"><Check className="h-6 w-6" /></span><div><div className="text-sm text-black/60">Booking number</div><div className="text-2xl font-bold">{done.number}</div></div></div>
+            <dl className="mt-6 grid grid-cols-2 gap-4 rounded-2xl p-4 text-sm" style={{ background: '#F6F1E7' }}><div><dt className="text-black/55">Room</dt><dd className="font-semibold">{done.room_type}</dd></div><div><dt className="text-black/55">Dates</dt><dd className="font-semibold">{date(done.check_in)} → {date(done.check_out)}</dd></div><div><dt className="text-black/55">Check-in</dt><dd className="font-semibold">from {biz.check_in_time}</dd></div><div><dt className="text-black/55">Payment</dt><dd className="font-semibold">{done.paid ? `Paid ${money(done.paid)} by ${done.gateway}` : `${money(done.total)} at the hotel`}</dd></div></dl>
+            <p className="mt-5 text-sm text-black/65">A confirmation has been sent to your email. Need anything before you arrive? Call us on <a className="font-semibold underline" href={`tel:${biz.phone}`}>{biz.phone}</a>.</p>
+            <div className="mt-6 flex flex-wrap gap-3"><Link to="/" className="rounded-full px-6 py-3 font-semibold text-white" style={{ background: FOREST }}>Back to the website</Link><Link to={`/dine/${slug}`} className="rounded-full border px-6 py-3 font-semibold" style={{ borderColor: FOREST, color: FOREST }}>Reserve a dinner table</Link></div>
+          </div>
         </div>
-      </Modal>
-    </Shell>
+      </div>
+    </div>
+  );
+  return (
+    <div className="min-h-screen" style={{ background: '#F6F1E7', color: '#1B231E' }}>
+      <Header title="Book your stay" text="Choose your dates and pick a room. Best rate when you book direct — pay online now or at the hotel." />
+      <div className="relative mx-auto -mt-14 max-w-6xl px-5 pb-24">
+        <form onSubmit={(e) => { e.preventDefault(); search(); }} className="grid gap-1 rounded-[26px] bg-white p-2.5 shadow-xl sm:grid-cols-[1fr_1fr_130px_auto]">
+          <label className="rounded-[18px] px-5 py-2.5 hover:bg-black/[0.03]"><span className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-black/50"><CalendarDays className="h-3.5 w-3.5" />Check-in</span><input type="date" min={today()} value={q.check_in} onChange={(e) => setQ({ ...q, check_in: e.target.value, check_out: e.target.value >= q.check_out ? addDays(e.target.value, 1) : q.check_out })} className="mt-0.5 block w-full bg-transparent text-base font-semibold outline-none" /></label>
+          <label className="rounded-[18px] px-5 py-2.5 hover:bg-black/[0.03]"><span className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-black/50"><CalendarDays className="h-3.5 w-3.5" />Check-out</span><input type="date" min={addDays(q.check_in, 1)} value={q.check_out} onChange={(e) => setQ({ ...q, check_out: e.target.value })} className="mt-0.5 block w-full bg-transparent text-base font-semibold outline-none" /></label>
+          <label className="rounded-[18px] px-5 py-2.5 hover:bg-black/[0.03]"><span className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-black/50"><Users className="h-3.5 w-3.5" />Guests</span><select value={q.guests} onChange={(e) => setQ({ ...q, guests: Number(e.target.value) })} className="mt-0.5 block w-full bg-transparent text-base font-semibold outline-none">{[1, 2, 3, 4, 5, 6].map((x) => <option key={x} value={x}>{x} {x === 1 ? 'guest' : 'guests'}</option>)}</select></label>
+          <button className="flex items-center justify-center gap-2 rounded-[18px] px-8 py-4 text-base font-semibold text-white" style={{ background: FOREST }}><Search className="h-4 w-4" />{busy ? 'Searching…' : 'Check availability'}</button>
+        </form>
+        <div className="mt-5 flex flex-wrap gap-x-6 gap-y-2 text-sm text-black/70">{[[ShieldCheck, 'Best rate when you book direct'], [CreditCard, 'Pay online or at the hotel'], [ParkingSquare, 'Free private parking'], [Check, 'Instant confirmation']].map(([I, t]: any) => <span key={t} className="inline-flex items-center gap-2"><I className="h-4 w-4" style={{ color: FOREST }} />{t}</span>)}</div>
+
+        <div className="mt-8 flex flex-wrap items-baseline justify-between gap-2"><h2 className="text-3xl font-semibold" style={SERIF}>{res ? `${res.types.filter((t: any) => t.available).length} rooms available` : 'Finding rooms…'}</h2>{res && <span className="text-black/60">{n} night{n > 1 ? 's' : ''} · {date(q.check_in)} – {date(q.check_out)} · {q.guests} guest{q.guests > 1 ? 's' : ''}</span>}</div>
+        <div className="mt-5 space-y-5">
+          {(res?.types || []).map((t: any) => (
+            <article key={t.id} className={`grid overflow-hidden rounded-[26px] bg-white shadow-sm transition md:grid-cols-[340px_1fr_auto] ${pick?.id === t.id ? 'ring-2' : 'hover:shadow-lg'} ${!t.available ? 'opacity-60' : ''}`} style={pick?.id === t.id ? { ['--tw-ring-color' as any]: GOLD } : {}}>
+              <div className="relative"><img src={photo(t)} alt={t.name} className="h-full min-h-[220px] w-full bg-[#E7E0D2] object-cover" loading="lazy" />{t.available > 0 && t.available <= 2 && <span className="absolute left-4 top-4 rounded-full px-3 py-1 text-xs font-bold shadow" style={{ background: GOLD, color: '#1B231E' }}>Only {t.available} left</span>}</div>
+              <div className="p-6">
+                <h3 className="text-3xl font-semibold leading-tight" style={SERIF}>{t.name}</h3>
+                <p className="mt-2 text-black/65">{t.description}</p>
+                <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2 text-sm text-black/75"><span className="inline-flex items-center gap-1.5"><Users className="h-4 w-4" />Up to {t.max_adults} adults{t.max_children ? ` + ${t.max_children} child` : ''}</span><span className="inline-flex items-center gap-1.5"><BedDouble className="h-4 w-4" />{t.bed} bed</span><span className="inline-flex items-center gap-1.5"><Maximize2 className="h-4 w-4" />{t.size} sq ft</span></div>
+                <div className="mt-4 flex flex-wrap gap-2">{(t.amenities || []).map((a: string) => { const I = AMENITY_ICON[a] || Check; return <span key={a} className="inline-flex items-center gap-1.5 rounded-full border border-black/10 px-3 py-1 text-sm"><I className="h-3.5 w-3.5" style={{ color: FOREST }} />{a}</span>; })}</div>
+              </div>
+              <div className="flex flex-col justify-between gap-4 border-t border-black/5 p-6 md:w-64 md:border-l md:border-t-0">
+                <div className="md:text-right"><div className="text-xs uppercase tracking-wider text-black/50">Per night</div><div className="text-3xl font-bold">{money(t.base_rate)}</div><div className="text-sm text-black/60">{money(t.base_rate * n)} for {n} night{n > 1 ? 's' : ''}</div><div className="text-xs text-black/45">+ taxes & service charge</div></div>
+                {t.available ? <button onClick={() => { setPick(t); setTimeout(() => document.getElementById('guest-details')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50); }} className="rounded-2xl px-5 py-3.5 text-base font-semibold text-white transition hover:brightness-110" style={{ background: pick?.id === t.id ? '#8A6A2E' : FOREST }}>{pick?.id === t.id ? 'Selected ✓' : 'Select this room'}</button> : <span className="rounded-2xl bg-black/5 px-5 py-3.5 text-center font-semibold text-black/50">Sold out for these dates</span>}
+              </div>
+            </article>
+          ))}
+          {res && !res.types.length && <div className="rounded-[26px] bg-white p-10 text-center text-black/60">No room fits {q.guests} guests. Try fewer guests or call us — we’ll find a solution.</div>}
+        </div>
+
+        {pick && (
+          <section id="guest-details" className="mt-10 grid gap-6 scroll-mt-6 lg:grid-cols-[1fr_360px]">
+            <div className="rounded-[26px] bg-white p-7 shadow-sm">
+              <h2 className="text-3xl font-semibold" style={SERIF}>Your details</h2><p className="mt-1 text-sm text-black/60">We only use these to manage your booking.</p>
+              <div className="mt-6 grid gap-4 sm:grid-cols-2">
+                <Field label="First name" required><input className="input h-12 rounded-xl text-base" value={g.first} onChange={(e) => setG({ ...g, first: e.target.value })} /></Field>
+                <Field label="Last name" required><input className="input h-12 rounded-xl text-base" value={g.last} onChange={(e) => setG({ ...g, last: e.target.value })} /></Field>
+                <Field label="Email" required><input type="email" className="input h-12 rounded-xl text-base" value={g.email} onChange={(e) => setG({ ...g, email: e.target.value })} /></Field>
+                <Field label="Phone (with country code)"><input className="input h-12 rounded-xl text-base" value={g.phone} onChange={(e) => setG({ ...g, phone: e.target.value })} placeholder="+94 77 123 4567" /></Field>
+                <Field label="Country"><input className="input h-12 rounded-xl text-base" value={g.country} onChange={(e) => setG({ ...g, country: e.target.value })} /></Field>
+                <Field label="Expected arrival time"><input type="time" className="input h-12 rounded-xl text-base" value={g.arrival} onChange={(e) => setG({ ...g, arrival: e.target.value })} /></Field>
+                <div className="sm:col-span-2"><Field label="Special requests (optional)"><textarea className="input min-h-[90px] rounded-xl text-base" value={g.special_requests} onChange={(e) => setG({ ...g, special_requests: e.target.value })} placeholder="Airport pick-up, honeymoon set-up, extra bed…" /></Field></div>
+              </div>
+              <h3 className="mt-8 text-xl font-semibold">How would you like to pay?</h3>
+              <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                {[[true, 'Pay now online', 'Secure card payment. Your room is guaranteed.', CreditCard], [false, 'Pay at the hotel', 'Pay by cash or card when you arrive.', Building2]].map(([v, t, d, I]: any) => <button type="button" key={t} onClick={() => setG({ ...g, pay_now: v })} className="flex items-start gap-3 rounded-2xl border-2 p-4 text-left transition" style={{ borderColor: g.pay_now === v ? FOREST : 'rgba(0,0,0,0.1)', background: g.pay_now === v ? '#F1F5F1' : 'white' }}><I className="mt-0.5 h-5 w-5" style={{ color: FOREST }} /><span><span className="block font-semibold">{t}</span><span className="block text-sm text-black/60">{d}</span></span></button>)}
+              </div>
+              {g.pay_now && <div className="mt-3 flex flex-wrap gap-2">{['PayHere', 'Visa / Mastercard', 'Amex', 'PayPal'].map((x) => <button type="button" key={x} onClick={() => setG({ ...g, gateway: x })} className="rounded-full border px-4 py-2 text-sm font-semibold" style={{ borderColor: g.gateway === x ? FOREST : 'rgba(0,0,0,0.12)', background: g.gateway === x ? FOREST : 'white', color: g.gateway === x ? 'white' : '#1B231E' }}>{x}</button>)}</div>}
+            </div>
+            <aside className="h-fit overflow-hidden rounded-[26px] bg-white shadow-sm lg:sticky lg:top-6">
+              <img src={photo(pick)} alt="" className="aspect-[16/10] w-full bg-[#E7E0D2] object-cover" />
+              <div className="p-6">
+                <div className="text-xs font-bold uppercase tracking-wider text-black/50">Your stay</div>
+                <div className="mt-1 text-2xl font-semibold" style={SERIF}>{pick.name}</div>
+                <div className="mt-3 space-y-1.5 text-sm"><div className="flex justify-between"><span className="text-black/60">Check-in</span><b>{date(q.check_in)}</b></div><div className="flex justify-between"><span className="text-black/60">Check-out</span><b>{date(q.check_out)}</b></div><div className="flex justify-between"><span className="text-black/60">Guests</span><b>{q.guests}</b></div><div className="flex justify-between"><span className="text-black/60">{money(pick.base_rate)} × {n} night{n > 1 ? 's' : ''}</span><b>{money(total)}</b></div></div>
+                <div className="mt-4 flex items-baseline justify-between border-t border-black/10 pt-4"><span className="font-semibold">Room total</span><span className="text-2xl font-bold">{money(total)}</span></div>
+                <p className="mt-1 text-xs text-black/50">Service charge, VAT and tourism levy are added on your final bill.</p>
+                <button onClick={book} className="mt-5 w-full rounded-2xl px-5 py-4 text-base font-semibold shadow-md transition hover:brightness-105" style={{ background: GOLD, color: '#1B231E' }}>{g.pay_now ? `Pay ${money(total)} & confirm` : 'Confirm booking'}</button>
+                <p className="mt-3 flex items-center justify-center gap-1.5 text-xs text-black/50"><Lock className="h-3.5 w-3.5" />Secure booking</p>
+              </div>
+            </aside>
+          </section>
+        )}
+      </div>
+    </div>
   );
 }
 

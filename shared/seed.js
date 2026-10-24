@@ -334,7 +334,8 @@ export function buildSeed() {
 
     // ---------- HOTEL
     if (has('hotel')) {
-      const rts = CURATED.room_types.map((r) => A('room_types', { ...r, description: r.name + ' with modern comforts.' }));
+      const RT_DESC = ['A calm double room opening onto the garden — ideal for couples exploring Kandy.', 'A spacious king room with a private balcony overlooking the outdoor pool.', 'Three comfortable beds for friends or a small family, with plenty of room to unwind.', 'Two connected spaces with a king bed, sitting area and balcony — made for families.', 'Our finest room: a hand-carved four-poster bed, bathtub and quiet garden views.'];
+      const rts = CURATED.room_types.map((r, i) => A('room_types', { ...r, description: RT_DESC[i] }));
       const rooms = [];
       const layout = [[0, 101, 6], [2, 107, 2], [1, 201, 6], [3, 207, 2], [4, 301, 2]];
       for (const [t, start, count] of layout) for (let i = 0; i < count; i++) rooms.push(A('rooms', { number: String(start + i), room_type_id: rts[t].id, floor: Math.floor(start / 100), view: t === 1 ? 'Pool' : t === 4 ? 'Garden' : pick(['Garden', 'Pool', 'City']), smoking: false, status: 'available', notes: '' }));
