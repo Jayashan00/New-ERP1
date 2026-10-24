@@ -8,6 +8,8 @@ import { useAuth } from '@/lib/auth';
 import { useToast } from '@/lib/toast';
 import { PageHeader, Spinner, ErrorBox, Kpi, Card, Status, Field, Modal, Empty, Help, Tabs, Toggle, useConfirm } from '@/components/ui';
 import { DataTable } from '@/components/DataTable';
+import { P } from '@/lib/photos';
+const DEF = { hero: P.hero, pool: P.pool, restaurant: P.restaurant, spa: P.spa, garden: P.garden, kandy: P.kandy };
 import { FolioDrawer } from '@/components/Folio';
 import { money, date, dateTime, minutesSince, pretty, today, addDays } from '@/lib/format';
 
@@ -186,7 +188,7 @@ export function WebsiteSettings() {
   return (
     <div className="anim-pop space-y-4">
       <PageHeader title="Website & photos" icon="Image" desc="Edit the public website guests see — the headline, description, contact details and photos for every section and room type." actions={<><a href="/" target="_blank" rel="noreferrer" className="btn-secondary"><ExternalLink className="h-4 w-4" />View website</a><button className="btn-primary" onClick={() => save()}><Save className="h-4 w-4" />Save text</button></>} />
-      <Help>Upload your own resort photos (from your phone or camera). They are resized automatically. Sections without a photo use an elegant colour panel. In the demo, photos are stored in this browser; after the backend is connected they are stored on the server for everyone.</Help>
+      <Help>The website starts with high-quality free photos of Kandy and resort life (Unsplash licence — free for commercial use). Replace any of them with your own resort photos: tap <b>Change</b> and choose a photo from your phone or computer. Photos are resized automatically. In the demo, photos are stored in this browser; after the backend is connected they are stored on the server for everyone.</Help>
       <div className="card grid gap-4 p-5 sm:grid-cols-2">
         <div className="sm:col-span-2"><Field label="Headline"><input className="input" value={w.hero_title} onChange={(e) => setW({ ...w, hero_title: e.target.value })} /></Field></div>
         <div className="sm:col-span-2"><Field label="Short introduction (under the headline)"><textarea className="input" value={w.hero_subtitle} onChange={(e) => setW({ ...w, hero_subtitle: e.target.value })} /></Field></div>
@@ -197,9 +199,9 @@ export function WebsiteSettings() {
         <Field label="Google Maps search text"><input className="input" value={w.map_query || ''} onChange={(e) => setW({ ...w, map_query: e.target.value })} /></Field>
       </div>
       <h2 className="font-semibold">Section photos</h2>
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{PHOTO_SLOTS.map(([k, l]) => <Slot key={k} label={l} url={w.photos?.[k] || (k === 'hero' ? '/images/room-deluxe.webp' : '')} onFile={(f: File) => upload(f, (u) => ({ ...w, photos: { ...w.photos, [k]: u } }))} onClear={() => { const n = { ...w, photos: { ...w.photos, [k]: '' } }; setW(n); save(n); }} />)}</div>
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{PHOTO_SLOTS.map(([k, l]) => <Slot key={k} label={l} url={w.photos?.[k] || (DEF as any)[k] || ''} onFile={(f: File) => upload(f, (u) => ({ ...w, photos: { ...w.photos, [k]: u } }))} onClear={() => { const n = { ...w, photos: { ...w.photos, [k]: '' } }; setW(n); save(n); }} />)}</div>
       <h2 className="font-semibold">Room type photos</h2>
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{(types.data || []).map((t) => <Slot key={t.id} label={t.name} url={w.room_photos?.[t.id] || ''} onFile={(f: File) => upload(f, (u) => ({ ...w, room_photos: { ...w.room_photos, [t.id]: u } }))} onClear={() => { const n = { ...w, room_photos: { ...w.room_photos, [t.id]: '' } }; setW(n); save(n); }} />)}</div>
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{(types.data || []).map((t, i) => <Slot key={t.id} label={t.name} url={w.room_photos?.[t.id] || P.rooms[i % P.rooms.length]} onFile={(f: File) => upload(f, (u) => ({ ...w, room_photos: { ...w.room_photos, [t.id]: u } }))} onClear={() => { const n = { ...w, room_photos: { ...w.room_photos, [t.id]: '' } }; setW(n); save(n); }} />)}</div>
       {void Globe}{void Receipt}{void useConfirm}{void useMemo}{void Empty}
     </div>
   );

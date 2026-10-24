@@ -7,6 +7,7 @@ import { useAsync } from '@/lib/hooks';
 import { api, MODE } from '@/lib/api';
 import { Avatar, Spinner } from '@/components/ui';
 import { money } from '@/lib/format';
+import { P } from '@/lib/photos';
 
 const GROUPS: [string, (u: any) => boolean][] = [
   ['Management', (u) => ['super_admin', 'business_owner'].includes(u.role)],
@@ -28,13 +29,11 @@ export function Login() {
   const showDemo = MODE === 'demo' || import.meta.env.VITE_SHOW_DEMO_LOGINS === 'true';
   return (
     <div className="grid min-h-screen lg:grid-cols-2" style={{ background: '#F6F1E7' }}>
-      <div className="relative hidden overflow-hidden lg:block" style={{ background: 'linear-gradient(160deg,#0E2A22 0%,#1F4A38 60%,#3C6B4E 100%)' }}>
-        <div className="absolute -right-24 top-20 h-80 w-80 rounded-full" style={{ background: 'radial-gradient(circle,#F3CF7E 0%,rgba(232,176,74,0.25) 45%,transparent 70%)' }} aria-hidden />
-        <svg viewBox="0 0 800 300" preserveAspectRatio="none" className="absolute inset-x-0 bottom-0 h-56 w-full" aria-hidden><path d="M0 160 C120 110 220 140 330 100 S540 80 640 120 S760 100 800 110 L800 300 L0 300Z" fill="#24493A" /><path d="M0 220 C160 180 300 220 430 190 S650 170 800 200 L800 300 L0 300Z" fill="#17352A" /></svg>
+      <div className="relative hidden overflow-hidden lg:block" style={{ background: '#0E2A22' }}>
+        <img src={P.login} alt="" className="absolute inset-0 h-full w-full object-cover" /><div className="absolute inset-0" style={{ background: 'linear-gradient(180deg,rgba(10,22,17,0.55) 0%,rgba(10,22,17,0.25) 40%,rgba(10,22,17,0.85) 100%)' }} />
         <div className="relative flex h-full flex-col justify-between p-12 text-[#F6F1E7]">
           <Link to="/" className="flex items-center gap-3"><span className="grid h-12 w-12 place-items-center rounded-full bg-white/10 text-[#F3E3B8]"><Leaf className="h-6 w-6" /></span><span className="leading-tight"><span className="block text-3xl font-semibold" style={serif}>Ceylon Ayu</span><span className="block text-[11px] font-semibold uppercase tracking-[0.3em] text-white/70">Resort · Kandy</span></span></Link>
           <div className="max-w-md pb-24">
-            <div className="mb-8 overflow-hidden rounded-t-[999px] border-2 border-[#E9C77E66] shadow-2xl" style={{ aspectRatio: '5 / 4' }}><img src="/images/room-deluxe.webp" alt="" className="h-full w-full object-cover" /></div>
             <h1 className="text-5xl font-semibold leading-tight" style={serif}>Welcome to work.</h1>
             <p className="mt-3 text-lg text-white/80">Sign in to see today’s rooms, tables and tasks. Your screen shows only what your job needs.</p>
           </div>

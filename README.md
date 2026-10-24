@@ -24,6 +24,9 @@ A complete hotel + restaurant system with a public website, built only for hotel
 
 **Every role has its own dashboard** with a plain-language summary of today, alerts, figures, lists and quick actions.
 
+## Website photos
+The website uses high-quality photos from **Unsplash** (free for commercial use, no attribution needed): Kandy’s Temple of the Tooth, Kandy Lake, the Bahirawakanda Buddha, Kandyan dancers, tea estates, pools and rooms. The Signature Suite and welcome section use the resort’s own four-poster room photo. Before going live, replace the stock room/pool/restaurant photos with the resort’s real ones in **Administration → Website & photos** so guests see exactly what they book.
+
 ## Made for everyday staff
 - Each menu shows only the everyday tasks; less-used screens are under **+ More options**.
 - Every dashboard starts with big **“What would you like to do?”** buttons written as plain actions (“Check a guest in”, “Take an order”, “Pay salaries”).

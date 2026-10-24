@@ -234,7 +234,7 @@ export function buildSeed() {
   const BIZ = [
     { id: 'b1', name: 'Ceylon Ayu Resort Kandy', type: 'mixed', owner_name: 'Resort Owner', email: 'info@ceylonayu.lk', city: 'Kandy', slug: 'ceylon-ayu', plan: 2, modules: ['hotel', 'restaurant', 'purchase', 'inventory', 'accounting', 'hrm', 'recruitment'] },
   ];
-  for (const b of BIZ) db.businesses.push({ id: b.id, name: b.name, type: b.type, owner_name: b.owner_name, email: b.email, phone: phone(), city: b.city, country: 'Sri Lanka', currency: 'LKR', modules: b.modules, plan_id: plans[b.plan].id, status: 'active', slug: b.slug, address: 'Kandy, Central Province, Sri Lanka (3 km from Kandy railway station)', created_at: dtOff(-ri(90, 400)) });
+  for (const b of BIZ) db.businesses.push({ id: b.id, name: b.name, type: b.type, owner_name: b.owner_name, email: b.email, phone: phone(), city: b.city, country: 'Sri Lanka', currency: 'LKR', modules: b.modules, plan_id: plans[b.plan].id, status: 'active', slug: b.slug, address: '294 George E. de Silva Mawatha, Kandy 20000, Sri Lanka', created_at: dtOff(-ri(90, 400)) });
   for (let m = 11; m >= 0; m--) for (let j = 0; j < ri(3, 7); j++) { const b = pick(BIZ); const pl = plans[ri(0, 3)]; add('subscriptions', { number: 'ORD-' + (5000 + db.subscriptions.length), business_id: b.id, plan_id: pl.id, cycle: rnd() > 0.7 ? 'yearly' : 'monthly', amount: pl.price_monthly, gateway: pick(['Stripe', 'PayPal', 'PayHere', 'Bank transfer']), date: dateOff(-m * 30 - ri(0, 25)), status: rnd() > 0.1 ? 'paid' : 'pending' }); }
   TITLES.coupons.forEach(([code, type, value]) => add('coupons', { code, type, value, limit: 100, used: ri(0, 60), expires: dateOff(ri(20, 200)), status: 'active' }));
   for (let i = 0; i < 4; i++) add('bank_transfers', { business_id: pick(BIZ).id, plan_id: pick(plans).id, amount: pick(plans).price_monthly, reference: 'BT' + ri(100000, 999999), date: dateOff(-ri(0, 10)), status: pick(['pending', 'pending', 'approved', 'rejected']) });
@@ -584,6 +584,7 @@ export function defaultSettings(b) {
     email_notifications: { new_booking: true, check_out_invoice: true, low_stock: true, leave_request: true, payslip: true, order_ready: false },
     gateways: Object.fromEntries(PAYMENT_GATEWAYS.map((g, i) => [g, { enabled: ['Stripe', 'PayHere', 'Bank transfer'].includes(g), mode: 'sandbox', key: '', secret: '' }])),
     integrations: Object.fromEntries(INTEGRATIONS.map((x) => [x.key, { enabled: ['smtp', 'pusher'].includes(x.key), values: {} }])),
+    website: { hero_title: 'Ceylon Ayu Resort', hero_subtitle: 'A peaceful garden resort with an outdoor pool in the hills of Kandy — minutes from the Temple of the Tooth, Kandy Lake and the Royal Botanical Gardens.', about: 'Set among gardens on the edge of Kandy, Ceylon Ayu Resort is a calm base for exploring Sri Lanka’s hill capital. Relax by the outdoor pool, enjoy the terrace and garden, and dine on Sri Lankan, seafood and Irish favourites at our restaurant. Free private parking for every guest, and only 3 km from Kandy railway station.', phone: '+94 81 000 0000', email: 'info@ceylonayu.lk', whatsapp: '', map_query: 'Ceylon Ayu Resort, 294 George E. de Silva Mawatha, Kandy', photos: {}, room_photos: {} },
   };
 }
 
