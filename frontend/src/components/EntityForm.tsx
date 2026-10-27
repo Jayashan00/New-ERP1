@@ -4,6 +4,7 @@ import { ENTITIES } from '@shared/entities.js';
 import { useLookups } from '@/lib/hooks';
 import { useAuth } from '@/lib/auth';
 import { Field, Toggle } from './ui';
+import { ImageInput } from './ImageInput';
 import { money, pretty, today } from '@/lib/format';
 
 export const ITEM_SOURCE: Record<string, string> = { restaurant_orders: 'menu_items', kots: 'menu_items', shop_sales: 'products' };
@@ -55,6 +56,7 @@ function ItemsEditor({ value, onChange, source }: { value: any[]; onChange: (v: 
 
 export function FieldInput({ f, value, onChange, maps, lists, entity }: { f: any; value: any; onChange: (v: any) => void; maps: any; lists: any; entity: string }) {
   switch (f.t) {
+    case 'image': return <ImageInput value={value} onChange={onChange} />;
     case 'textarea': return <textarea className="input min-h-[84px]" value={value ?? ''} onChange={(e) => onChange(e.target.value)} />;
     case 'number': case 'money': case 'percent': return <div className="relative"><input className="input" type="number" step="any" value={value ?? ''} onChange={(e) => onChange(e.target.value)} />{f.t === 'percent' && <span className="pointer-events-none absolute right-3 top-2 text-sm text-muted">%</span>}</div>;
     case 'date': return <input className="input" type="date" value={value ?? ''} onChange={(e) => onChange(e.target.value)} />;
@@ -82,7 +84,7 @@ export function EntityForm({ entity, value, onChange, errors = {} }: { entity: s
   const { lists, maps } = useLookups(refCols(entity));
   const hide = (f: any) => (f.k === 'number' && e.prefix) || (me?.role?.self && e.ownerField === f.k) || ['total'].includes(f.k) && e.fields.some((x: any) => x.t === 'items');
   const fields = useMemo(() => e.fields.filter((f: any) => !hide(f)), [entity, me]);
-  const wide = (f: any) => ['textarea', 'items', 'multi', 'refs'].includes(f.t);
+  const wide = (f: any) => ['textarea', 'items', 'multi', 'refs', 'image'].includes(f.t);
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
       {fields.map((f: any) => (

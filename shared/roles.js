@@ -71,7 +71,7 @@ export const DEFAULT_ROLES = [
   {
     key: 'chef', name: 'Chef / Kitchen', dashboard: 'kitchen', color: '#DC2626',
     desc: 'Kitchen tickets, dish availability, recipes and kitchen stock.',
-    grants: { ...STAFF_BASE, 'page:kitchen-display': V, kots: 've', menu_items: 've', menu_categories: V, recipes: 'vce', ingredients: 've', restaurant_orders: V },
+    grants: { ...STAFF_BASE, 'page:kitchen-display': V, kots: 've', menu_items: 'vce', modifiers: 've', menu_categories: V, recipes: 'vce', ingredients: 've', restaurant_orders: V },
   },
   {
     key: 'storekeeper', name: 'Storekeeper', dashboard: 'store', color: '#65A30D',

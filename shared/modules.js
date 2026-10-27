@@ -28,7 +28,7 @@ export const MODULES = [
   },
   {
     key: 'distribution', label: 'Online & channels', icon: 'Globe', needs: 'hotel',
-    items: [pg('booking-engine', 'Website booking engine', 'Globe'), pg('channel-manager', 'Channel manager', 'Share2'), en('channels', 'Connected channels (OTAs)'), en('channel_sync_logs', 'Channel sync log'), en('travel_agents', 'Travel agents & corporate'), en('rate_plans', 'Rate plans & seasons'), en('meal_plans', 'Meal plans & packages')],
+    items: [pg('booking-engine', 'Website booking engine', 'Globe'), pg('channel-manager', 'Channel manager', 'Share2'), en('room_closures', 'Closed dates (stop sell)'), en('channels', 'Connected channels (OTAs)'), en('channel_sync_logs', 'Channel sync log'), en('travel_agents', 'Travel agents & corporate'), en('rate_plans', 'Rate plans & seasons'), en('meal_plans', 'Meal plans & packages')],
   },
   {
     key: 'rooms', label: 'Rooms & housekeeping', icon: 'BedDouble', needs: 'hotel',
@@ -41,7 +41,7 @@ export const MODULES = [
   {
     key: 'restaurant', label: 'Restaurant', icon: 'UtensilsCrossed',
     items: [
-      pg('restaurant-pos', 'Restaurant POS', 'MonitorSmartphone'), pg('floor-plan', 'Tables — 3D floor', 'LayoutGrid'), pg('service-board', 'Waiter service board', 'BellRing'), pg('kitchen-display', 'Kitchen display (KDS)', 'ChefHat'),
+      pg('restaurant-pos', 'Restaurant POS', 'MonitorSmartphone'), pg('floor-plan', 'Tables & floor plan', 'LayoutGrid'), pg('service-board', 'Waiter service board', 'BellRing'), pg('kitchen-display', 'Kitchen display (KDS)', 'ChefHat'),
       en('restaurant_orders', 'Orders'), en('kots', 'KOT history'), en('table_reservations', 'Table bookings'), en('waitlist', 'Waitlist'),
       en('menu_items', 'Menu items'), en('menu_categories', 'Menu categories'), en('modifiers', 'Modifiers'), en('combos', 'Set menus & combos'),
       en('recipes', 'Recipes & food cost'), en('ingredients', 'Kitchen stock'), en('bar_stock', 'Bar stock'), en('tables', 'Tables'), en('areas', 'Dining areas'),
@@ -89,7 +89,7 @@ export const MODULES = [
 // Everyday tasks stay in the menu; everything else sits behind "More" so the menu stays short.
 const PRIMARY = {
   hotel: ['front-desk', 'new-booking', 'room-chart', 'reservations', 'customers', 'guest-billing', 'night-audit'],
-  distribution: ['booking-engine', 'channel-manager', 'travel_agents', 'rate_plans'],
+  distribution: ['booking-engine', 'channel-manager', 'room_closures', 'travel_agents', 'rate_plans'],
   rooms: ['housekeeping-board', 'rooms', 'room-qr', 'maintenance'],
   guestservices: ['guest_requests', 'transport_bookings', 'parking'],
   restaurant: ['restaurant-pos', 'floor-plan', 'service-board', 'kitchen-display', 'table_reservations', 'restaurant_orders', 'menu_items'],

@@ -3,11 +3,13 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "REST API for NexaERP — auth, role permissions, business logic (shared with the frontend).",
-  "engines": { "node": ">=22.5" },
+  "description": "REST API for NexaERP \u2014 auth, role permissions, business logic (shared with the frontend).",
+  "engines": {
+    "node": ">=22.5"
+  },
   "scripts": {
-    "start": "node --no-warnings src/server.js",
-    "dev": "node --no-warnings --watch src/server.js",
+    "start": "node init && node --no-warnings src/server.js",
+    "dev": "node init && node --no-warnings --watch src/server.js",
     "seed": "node --no-warnings src/server.js --reseed-only",
     "test": "node --no-warnings tests/logic.test.mjs",
     "test:api": "node --no-warnings src/selftest.js"

@@ -20,6 +20,7 @@ export function fmtValue(f: any, v: any, maps: Record<string, Record<string, str
     case 'rating': return <span className="inline-flex">{[1, 2, 3, 4, 5].map((n) => <Star key={n} className={`h-3.5 w-3.5 ${n <= v ? 'fill-saffron text-saffron' : 'text-line'}`} />)}</span>;
     case 'color': return <span className="inline-flex items-center gap-1.5"><span className="h-3.5 w-3.5 rounded" style={{ background: v }} />{v}</span>;
     case 'items': return `${(v || []).length} item${(v || []).length === 1 ? '' : 's'}`;
+    case 'image': return <img src={v} alt="" className="h-12 w-16 rounded-lg bg-paper object-cover" loading="lazy" />;
     case 'url': return <a className="text-brand underline" href={v} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}>Open</a>;
     case 'textarea': return <span className="line-clamp-2 whitespace-pre-line">{String(v)}</span>;
     default: return String(v);

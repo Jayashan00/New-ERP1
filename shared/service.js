@@ -124,6 +124,7 @@ export class Service {
     if (col === 'stock_adjustments') { const p = this.find('products', r.product_id); if (p) this.s.update('products', p.id, { ...p, stock: (p.stock || 0) + (r.type === 'add' ? 1 : -1) * r.quantity }); }
     if (col === 'grns') for (const it of r.items || []) { const item = this.find('items', it.ref); if (item) this.s.update('items', item.id, { ...item, quantity: (item.quantity || 0) + Number(it.qty || 0) }); }
     if (col === 'leave_applications') this.notify('Leave request', `${this.find('employees', r.employee_id)?.name || 'An employee'} applied for ${r.days} day(s) leave`, 'hrm');
+    if (col === 'reservations') this.queueChannelSync(r.source && !['Walk-in', 'Phone', 'Website'].includes(r.source) ? `Booking received from ${r.source}${r.ota_ref ? ' (' + r.ota_ref + ')' : ''} — other channels updated` : `New ${r.source || 'direct'} booking ${r.number}: ${r.check_in} → ${r.check_out}`, r.source);
     if (col === 'reservations') { const room = this.find('rooms', r.room_id); if (room && r.check_in === today() && room.status === 'available') this.s.update('rooms', room.id, { ...room, status: 'reserved' }); this.notify('New booking', `${r.number} for ${this.find('customers', r.guest_id)?.name || 'guest'}`, 'hotel'); }
     if (col === 'guest_requests') this.notify(`Room ${r.room}: ${r.type}`, r.details || `${r.guest_name || 'Guest'} needs help`, 'hotel', ['front_office', 'housekeeping', 'hotel_manager', 'concierge']);
     if (col === 'transport_bookings') this.notify('Transport requested', `${r.type} for ${r.guest_name} at ${String(r.pickup_time).replace('T', ' ')}`, 'hotel', ['concierge', 'front_office', 'hotel_manager']);
@@ -217,8 +218,9 @@ const ACTIONS = {
     const tomorrow = iso(new Date(Date.now() + 864e5));
     // an in-house guest keeps the room until they actually check out (even if due today)
     const effOut = (r) => (r.status === 'checked_in' && r.check_out < tomorrow ? tomorrow : r.check_out);
+    const closedTypes = new Set(this.rows('room_closures').filter((c) => c.date >= check_in && c.date < check_out).map((c) => c.room_type_id));
     const busy = new Set(this.rows('reservations').filter((r) => r.id !== exclude && !['cancelled', 'no_show', 'checked_out'].includes(r.status) && r.check_in < check_out && effOut(r) > check_in).map((r) => r.room_id));
-    return this.rows('rooms').filter((r) => r.status !== 'out_of_order' && !busy.has(r.id) && (!room_type_id || r.room_type_id === room_type_id) && (!ready || ['available', 'reserved'].includes(r.status)));
+    return this.rows('rooms').filter((r) => r.status !== 'out_of_order' && !closedTypes.has(r.room_type_id) && !busy.has(r.id) && (!room_type_id || r.room_type_id === room_type_id) && (!ready || ['available', 'reserved'].includes(r.status)));
   },
   createBooking(p) {
     req(this, 'reservations', 'c');
@@ -304,7 +306,7 @@ const ACTIONS = {
     req(this, 'reservations', 'e');
     const r = this.find('reservations', reservation_id); if (!r) notFound('Booking');
     if (!['confirmed', 'tentative'].includes(r.status)) bad('Only upcoming bookings can be cancelled.');
-    this.s.update('reservations', r.id, { ...r, status });
+    this.s.update('reservations', r.id, { ...r, status }); this.queueChannelSync(`Booking ${r.number} ${status} — room released ${r.check_in} → ${r.check_out}`);
     const room = this.find('rooms', r.room_id); if (room && room.status === 'reserved') this.s.update('rooms', room.id, { ...room, status: 'available' });
     this.audit('updated', 'reservations', r.number + ' ' + status); return { ok: true };
   },
@@ -364,7 +366,16 @@ const ACTIONS = {
     const types = this.rows('room_types'); const rooms = this.rows('rooms'); const plans = this.rows('rate_plans');
     const dates = Array.from({ length: days }, (_, i) => iso(new Date(new Date((start || today()) + 'T12:00').getTime() + i * 864e5)));
     const res = this.rows('reservations').filter((r) => !['cancelled', 'no_show', 'checked_out'].includes(r.status));
-    return { dates, types: types.map((t) => ({ id: t.id, name: t.name, total: rooms.filter((r) => r.room_type_id === t.id && r.status !== 'out_of_order').length, cells: dates.map((d) => { const sold = res.filter((r) => r.room_type_id === t.id && r.check_in <= d && r.check_out > d).length; const total = rooms.filter((r) => r.room_type_id === t.id && r.status !== 'out_of_order').length; const plan = plans.find((pl) => pl.room_type_id === t.id && pl.status === 'active' && pl.start <= d && pl.end >= d); return { date: d, available: Math.max(0, total - sold), sold, rate: plan?.rate || t.base_rate }; }) })), channels: this.rows('channels') };
+    return { dates, types: types.map((t) => ({ id: t.id, name: t.name, total: rooms.filter((r) => r.room_type_id === t.id && r.status !== 'out_of_order').length, cells: dates.map((d) => { const sold = res.filter((r) => r.room_type_id === t.id && r.check_in <= d && r.check_out > d).length; const total = rooms.filter((r) => r.room_type_id === t.id && r.status !== 'out_of_order').length; const plan = plans.find((pl) => pl.room_type_id === t.id && pl.status === 'active' && pl.start <= d && pl.end >= d); const closed = this.rows('room_closures').some((c) => c.room_type_id === t.id && c.date === d); return { date: d, available: closed ? 0 : Math.max(0, total - sold), sold, closed, rate: plan?.rate || t.base_rate }; }) })), channels: this.rows('channels') };
+  },
+  toggleClosure({ room_type_id, date, reason = 'Sold out' }) {
+    req(this, 'room_closures', 'c');
+    const ex = this.rows('room_closures').find((c) => c.room_type_id === room_type_id && c.date === date);
+    const t = this.find('room_types', room_type_id);
+    if (ex) { this.s.remove('room_closures', ex.id); this.queueChannelSync(`Reopened ${t?.name} on ${date}`); return { closed: false, message: `${t?.name} is open for sale again on ${date}.` }; }
+    this.s.insert('room_closures', { id: newId(), businessId: this.biz, created_at: nowStamp(), room_type_id, date, reason, notes: '' });
+    this.queueChannelSync(`Stop sell: ${t?.name} closed on ${date}`, null, 'Stop sell');
+    return { closed: true, message: `${t?.name} is closed on ${date} — no one can book it anywhere.` };
   },
   channelPush({ action = 'Full sync', details = '' }) {
     req(this, 'channels', 'e');
@@ -723,6 +734,12 @@ const ACTIONS = {
   },
 };
 
+Service.prototype.queueChannelSync = function (details, skip, action = 'Availability update') {
+  for (const c of this.rows('channels').filter((x) => x.status !== 'disconnected' && x.name !== skip && x.auto_sync !== false)) {
+    this.s.insert('channel_sync_logs', { id: newId(), businessId: this.biz, created_at: nowStamp(), channel: c.name, action, details, date: nowStamp(), by: 'Auto-sync', status: 'queued' });
+    this.s.update('channels', c.id, { ...c, last_sync: nowStamp() });
+  }
+};
 // internal helpers are methods, not callable actions
 Service.prototype.orderTotals = ACTIONS.orderTotals;
 Service.prototype.loyalty = ACTIONS.loyalty;
@@ -776,7 +793,14 @@ export function publicService(store, slug) {
     },
     form: ({ id }) => { const f = sys.find('forms', id); if (!f || f.status !== 'active') throw new ApiError(404, 'This form is closed.'); return { business: pub, form: { id: f.id, name: f.name, description: f.description, fields: String(f.fields || '').split('\n').filter(Boolean).map((l) => { const i = l.lastIndexOf(':'); return { label: l.slice(0, i), type: l.slice(i + 1) || 'text' }; }) } }; },
     submitForm: ({ id, answers, name }) => { const f = sys.find('forms', id); if (!f) throw new ApiError(404, 'Form not found.'); store.insert('form_responses', { id: newId(), businessId: b.id, created_at: nowStamp(), form_id: f.id, submitted_by: name || 'Anonymous', answers: Object.entries(answers || {}).map(([k, v]) => `${k}: ${v}`).join('\n'), date: nowStamp() }); store.update('forms', f.id, { ...f, responses: (f.responses || 0) + 1 }); return { ok: true }; },
-    site: () => ({ business: pub, website: st.website || {}, rooms: sys.rows('room_types'), menu: sys.rows('menu_items').filter((m) => m.status === 'active' && m.available !== false).slice(0, 12), categories: sys.rows('menu_categories'), services: sys.rows('extra_services').filter((x) => x.status === 'active'), reviews: sys.rows('feedback').filter((f) => f.rating >= 4 && f.comment).slice(0, 6) }),
+    site: () => ({ business: pub, website: st.website || {}, rooms: sys.rows('room_types'), menu: sys.rows('menu_items').filter((m) => m.status === 'active' && m.available !== false).slice(0, 12), tables_count: sys.rows('tables').length, categories: sys.rows('menu_categories'), services: sys.rows('extra_services').filter((x) => x.status === 'active'), reviews: sys.rows('feedback').filter((f) => f.rating >= 4 && f.comment).slice(0, 6) }),
+    calendar: ({ from, days = 62, room_type_id }) => {
+      const start = from || today(); const types = sys.rows('room_types').filter((t) => !room_type_id || t.id === room_type_id);
+      const rooms = sys.rows('rooms').filter((r) => r.status !== 'out_of_order'); const res = sys.rows('reservations').filter((r) => !['cancelled', 'no_show', 'checked_out'].includes(r.status)); const closures = sys.rows('room_closures');
+      const out = [];
+      for (let i = 0; i < days; i++) { const d = iso(new Date(new Date(start + 'T12:00').getTime() + i * 864e5)); let free = 0; for (const t of types) { if (closures.some((c) => c.room_type_id === t.id && c.date === d)) continue; const total = rooms.filter((r) => r.room_type_id === t.id).length; const sold = res.filter((r) => r.room_type_id === t.id && r.check_in <= d && r.check_out > d).length; free += Math.max(0, total - sold); } out.push({ date: d, free }); }
+      return { days: out };
+    },
     roomInfo: ({ room }) => {
       const rm = sys.rows('rooms').find((x) => x.number === String(room)); if (!rm) throw new ApiError(404, 'Room not found.');
       const r = sys.rows('reservations').find((x) => x.room_id === rm.id && x.status === 'checked_in');
@@ -817,7 +841,7 @@ export function publicService(store, slug) {
   };
 }
 
-export const PUBLIC_ACTIONS = ['site', 'roomInfo', 'roomOrder', 'roomRequest', 'tablesAvailability', 'bookTable', 'info', 'menu', 'qrOrder', 'orderStatus', 'callWaiter', 'rooms', 'book', 'store', 'storeOrder', 'form', 'submitForm', 'feedback'];
+export const PUBLIC_ACTIONS = ['calendar', 'site', 'roomInfo', 'roomOrder', 'roomRequest', 'tablesAvailability', 'bookTable', 'info', 'menu', 'qrOrder', 'orderStatus', 'callWaiter', 'rooms', 'book', 'store', 'storeOrder', 'form', 'submitForm', 'feedback'];
 
 /** Landing page + plans for the marketing home page */
 export function landingData(store) {

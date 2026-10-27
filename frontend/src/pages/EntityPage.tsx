@@ -136,7 +136,7 @@ export default function EntityPage({ entityKey, embedded }: { entityKey?: string
                   <tbody>{(viewing[f.k] || []).map((i: any, n: number) => <tr key={n} className="border-t border-line"><td className="td">{i.name}{i.note && <span className="block text-xs text-muted">{i.note}</span>}</td><td className="td text-right">{i.qty}</td><td className="td text-right">{money(i.price)}</td><td className="td text-right font-medium">{money(i.total ?? i.qty * i.price)}</td></tr>)}</tbody></table>
               </div>
             ) : (
-              <div key={f.k} className={['textarea', 'multi', 'refs'].includes(f.t) ? 'sm:col-span-2' : ''}><dt className="text-xs font-medium text-muted">{f.l}</dt><dd className="mt-0.5 whitespace-pre-line text-sm">{fmtValue(f, viewing[f.k], maps)}</dd></div>
+              <div key={f.k} className={['textarea', 'multi', 'refs', 'image'].includes(f.t) ? 'sm:col-span-2' : ''}><dt className="text-xs font-medium text-muted">{f.l}</dt><dd className="mt-0.5 whitespace-pre-line text-sm">{f.t === 'image' && viewing[f.k] ? <img src={viewing[f.k]} alt="" className="max-h-64 w-full rounded-xl object-cover" /> : fmtValue(f, viewing[f.k], maps)}</dd></div>
             ))}
             {viewing.created_at && <div className="text-xs text-muted sm:col-span-2">Created {viewing.created_at.replace('T', ' ')}{viewing.updated_at ? ` · last changed ${viewing.updated_at.replace('T', ' ')}` : ''}</div>}
           </dl>
