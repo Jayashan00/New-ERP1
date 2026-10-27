@@ -11,7 +11,7 @@ import { PrintModal, ReceiptDoc, KotDoc } from '@/components/Printable';
 import { ChartCard } from '@/components/Charts';
 import { DataTable } from '@/components/DataTable';
 import { PublicLinkCard } from '../hotel';
-import { Restaurant3D, Legend3D } from '@/components/Restaurant3D';
+import { FloorPlan2D, Legend2D, TableEditor } from '@/components/FloorPlan2D';
 import { money, minutesSince, pretty, time, today } from '@/lib/format';
 
 const TYPES = [['dine_in', 'Dine-in'], ['takeaway', 'Takeaway'], ['delivery', 'Delivery'], ['room_service', 'Room service']];
@@ -177,7 +177,7 @@ const TABLE_STYLE: Record<string, string> = { free: 'border-ok/50 bg-ok/10', occ
 export function FloorPlan() {
   const tables = useList('tables'); const areas = useList('areas', { optional: true }); const orders = useList('restaurant_orders'); const resv = useList('table_reservations', { optional: true }); const wait = useList('waitlist', { optional: true });
   const { can } = useAuth(); const nav = useNavigate(); const toast = useToast();
-  const [area, setArea] = useState('all'); const [sel, setSel] = useState<any>(null); const [move, setMove] = useState<any>(null); const [view3d, setView3d] = useState(true);
+  const [area, setArea] = useState('all'); const [sel, setSel] = useState<any>(null); const [move, setMove] = useState<any>(null); const [editMode, setEditMode] = useState(false); const [edSel, setEdSel] = useState<string | null>(null);
   if (tables.error || orders.error) return <ErrorBox error={tables.error || orders.error} />;
   if (!tables.data || !areas.data || !orders.data) return <Spinner />;
   const open = orders.data.filter((o) => !['paid', 'cancelled'].includes(o.status));
@@ -191,23 +191,14 @@ export function FloorPlan() {
   return (
     <div className="anim-pop">
       <PageHeader title="Tables & floor" icon="LayoutGrid" desc="Live view of every table. Tap a table to take an order, move guests or settle the bill." help={<><b>Green</b> = free, <b>blue</b> = seated, <b>gold</b> = reserved, <b>red pulsing</b> = asking for the bill, grey = needs clearing. The timer shows how long guests have been seated.</>}
-        actions={<><div className="flex rounded-lg border border-line bg-surface p-0.5"><button className={`btn-sm btn ${view3d ? 'bg-paper text-ink' : 'text-muted'}`} onClick={() => setView3d(true)}>3D floor</button><button className={`btn-sm btn ${!view3d ? 'bg-paper text-ink' : 'text-muted'}`} onClick={() => setView3d(false)}>Grid</button></div><button className="btn-primary" onClick={() => nav('/app/restaurant-pos')}>Open POS</button></>} />
+        actions={<>{can('tables', 'c') && <button className={editMode ? 'btn-primary' : 'btn-secondary'} onClick={() => { setEditMode(!editMode); setEdSel(null); }}>{editMode ? 'Done editing' : 'Edit layout'}</button>}<button className="btn-primary" onClick={() => nav('/app/restaurant-pos')}>Open POS</button></>} />
       <div className="mb-3 flex flex-wrap items-center gap-3"><Tabs value={area} onChange={setArea} tabs={[{ key: 'all', label: 'All areas' }, ...areas.data.map((a) => ({ key: a.id, label: a.name }))]} /><div className="flex flex-wrap gap-2 text-xs">{Object.keys(TABLE_STYLE).map((s) => <span key={s} className={`chip border ${TABLE_STYLE[s].replace('pulse-ring', '')}`}>{pretty(s)}</span>)}</div></div>
       <div className="grid gap-4 xl:grid-cols-[1fr_320px]">
-        {view3d ? <div className="space-y-2">{area === 'all' && <p className="text-sm text-muted">Showing <b>{busiest?.name}</b> — pick an area above to see the others.</p>}<Restaurant3D height={560} tables={tables.data.filter((t) => t.area_id === area3d).map((t) => { const o = orderOf(t); return { ...t, tone: toneOf(t), sub: o ? `${money(o.total, { short: true })} · ${minutesSince(o.date)}m` : `${t.seats} seats` }; })} onSelect={(t) => setSel(tables.data!.find((x) => x.id === t.id))} /><Legend3D tones={['free', 'busy', 'reserved', 'alert', 'cleaning']} /></div> : <div className="card grid grid-cols-2 gap-3 p-4 sm:grid-cols-4 lg:grid-cols-6">
-          {shown.map((t) => { const ord = orderOf(t); return (
-            <button key={t.id} onClick={() => setSel(t)} className={`relative flex aspect-square flex-col items-center justify-center border-2 p-2 text-center transition hover:scale-[1.02] ${t.shape === 'round' ? 'rounded-full' : 'rounded-2xl'} ${TABLE_STYLE[t.status]}`}>
-              <span className="text-xl font-bold">{t.name}</span>
-              <span className="flex items-center gap-1 text-xs text-muted"><Users className="h-3 w-3" />{t.seats}</span>
-              {ord && <span className="mt-1 text-xs font-semibold">{money(ord.total, { short: true })}</span>}
-              {ord && <span className="flex items-center gap-1 text-[11px] text-muted"><Clock className="h-3 w-3" />{minutesSince(ord.date)}m</span>}
-              {ord?.status === 'ready' && <span className="absolute -right-1 -top-1 chip bg-ok text-white">Ready</span>}
-            </button>); })}
-        </div>}
-        <div className="space-y-4">
+        {editMode ? <LayoutEditor areaId={area3d} tables={tables.data.filter((t) => t.area_id === area3d)} sel={edSel} setSel={setEdSel} /> : <div className="space-y-2">{area === 'all' && <p className="text-sm text-muted">Showing <b>{busiest?.name}</b> — pick an area above to see the others.</p>}<FloorPlan2D tables={tables.data.filter((t) => t.area_id === area3d).map((t) => { const o = orderOf(t); return { ...t, tone: toneOf(t), sub: o ? `${money(o.total, { short: true })} · ${minutesSince(o.date)}m` : `${t.seats} seats` }; })} onSelect={(t) => setSel(tables.data!.find((x) => x.id === t.id))} /><Legend2D tones={['free', 'busy', 'reserved', 'alert', 'cleaning']} /></div>}
+        {!editMode && <div className="space-y-4">
           <Card title="Bookings today" pad={false}><ul>{(resv.data || []).filter((r) => r.date === today() && r.status === 'booked').sort((a, b) => a.time.localeCompare(b.time)).map((r) => <li key={r.id} className="flex items-center justify-between border-t border-line px-4 py-2 text-sm first:border-0"><span><b>{r.time}</b> {r.customer_name}</span><span className="text-muted">{r.guests} pax · {tables.data!.find((t) => t.id === r.table_id)?.name}</span></li>)}{!(resv.data || []).some((r) => r.date === today() && r.status === 'booked') && <li className="px-4 py-4 text-center text-sm text-muted">No bookings left today.</li>}</ul></Card>
           <Card title="Waitlist" pad={false} actions={can('waitlist', 'c') && <button className="text-xs font-semibold text-brand" onClick={() => nav('/app/e/waitlist?new=1')}>Add</button>}><ul>{(wait.data || []).filter((w) => w.status === 'waiting' || w.status === 'notified').map((w) => <li key={w.id} className="flex items-center justify-between border-t border-line px-4 py-2 text-sm first:border-0"><span>{w.customer_name} <span className="text-muted">({w.guests})</span></span>{can('waitlist', 'e') && <button className="btn-ghost btn-sm text-brand" onClick={() => api.update('waitlist', w.id, { status: 'seated' }).then(() => toast.ok('Marked as seated.'))}>Seat</button>}</li>)}{!(wait.data || []).some((w) => w.status === 'waiting') && <li className="px-4 py-4 text-center text-sm text-muted">Nobody waiting.</li>}</ul></Card>
-        </div>
+        </div>}
       </div>
 
       <Modal open={!!sel} onClose={() => setSel(null)} title={sel ? `${sel.name} · ${sel.seats} seats` : ''} footer={sel && <>
@@ -223,6 +214,27 @@ export function FloorPlan() {
         <p className="mb-3 text-sm text-muted">Choose a free table to move to, or a busy table to merge the bills into one.</p>
         <div className="grid grid-cols-4 gap-2 sm:grid-cols-6">{tables.data.filter((t) => t.id !== sel?.id).map((t) => <button key={t.id} onClick={() => setMove({ ...move, to: t.id })} className={`rounded-lg border-2 px-2 py-3 text-sm font-bold ${move?.to === t.id ? 'border-brand bg-brand text-white' : orderOf(t) ? 'border-info/40 bg-info/5' : 'border-line'}`}>{t.name}<span className="block text-[10px] font-normal">{orderOf(t) ? 'merge' : 'free'}</span></button>)}</div>
       </Modal>
+    </div>
+  );
+}
+
+// ------------------------------------------------------------------ LAYOUT EDITOR
+function LayoutEditor({ areaId, tables, sel, setSel }: { areaId: string; tables: any[]; sel: string | null; setSel: (id: string | null) => void }) {
+  const toast = useToast(); const confirm = useConfirm();
+  const [local, setLocal] = useState<Record<string, any>>({});
+  const merged = tables.map((t) => ({ ...t, ...(local[t.id] || {}) }));
+  const cur = merged.find((t) => t.id === sel);
+  const save = async (id: string, patch: any) => { setLocal((l) => ({ ...l, [id]: { ...(l[id] || {}), ...patch } })); try { await api.update('tables', id, patch); } catch (e) { toast.err(e); } };
+  const add = async (shape: string, seats: number) => { const all = await api.list('tables'); const n = Math.max(0, ...all.map((t: any) => parseInt(String(t.name).replace(/\D/g, ''), 10) || 0)) + 1; try { const here = all.filter((t: any) => t.area_id === areaId); let spot = { x: 1.5, y: 1.5 };
+    outer: for (let y = 1.2; y < 6.6; y += 1.6) for (let x = 1.3; x < 11; x += 2.2) if (!here.some((t: any) => Math.abs(t.pos_x - x) < 2.1 && Math.abs(t.pos_y - y) < 1.6)) { spot = { x, y }; break outer; }
+    const t = await api.create('tables', { name: 'T' + n, area_id: areaId, seats, shape, pos_x: spot.x, pos_y: spot.y, rotation: '0', status: 'free' }); setSel(t.id); toast.ok(`Table T${n} added — drag it where you want.`); } catch (e) { toast.err(e); } };
+  return (
+    <div className="grid gap-4 xl:col-span-2 xl:grid-cols-[1fr_300px]">
+      <div className="space-y-2">
+        <div className="flex flex-wrap items-center gap-2 rounded-xl border border-brand/30 bg-brand-soft/60 p-3 text-sm"><b className="mr-2">Add a table:</b><button className="btn-secondary btn-sm" onClick={() => add('round', 2)}>Round · 2</button><button className="btn-secondary btn-sm" onClick={() => add('square', 4)}>Square · 4</button><button className="btn-secondary btn-sm" onClick={() => add('long', 6)}>Long · 6</button><button className="btn-secondary btn-sm" onClick={() => add('long', 10)}>Long · 10</button><span className="ml-auto text-xs text-muted">Drag tables to move them. Changes save by themselves.</span></div>
+        <FloorPlan2D editable tables={merged.map((t) => ({ ...t, tone: 'free' }))} selectedId={sel || undefined} onSelect={(t) => setSel(t.id)} onMove={(id, x, y) => save(id, { pos_x: x, pos_y: y })} />
+      </div>
+      <Card title={cur ? `Table ${cur.name}` : 'Choose a table'}>{cur ? <TableEditor t={cur} onChange={(patch) => save(cur.id, patch)} onDelete={async () => { if (await confirm({ title: `Remove table ${cur.name}?`, text: 'It disappears from the floor plan and QR ordering.', confirm: 'Remove', danger: true })) { try { await api.remove('tables', cur.id); setSel(null); toast.ok('Table removed.'); } catch (e) { toast.err(e); } } }} /> : <p className="text-sm text-muted">Tap a table on the plan to change its name, number of chairs or shape. Use the buttons above to add new tables.</p>}</Card>
     </div>
   );
 }

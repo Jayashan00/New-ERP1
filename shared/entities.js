@@ -130,7 +130,7 @@ E('customers', 'campaigns', 'SMS & email campaigns', 'Send offers and greetings 
 
 // ---------------------------------------------------------------- HOTEL
 E('hotel', 'room_types', 'Room types', 'Categories of rooms with base price and capacity.', [
-  'name*|Room type|text', 'base_rate*|Base rate per night|money', 'max_adults|Max adults|number', 'max_children|Max children|number', 'bed|Bed|select:King,Queen,Twin,Double,Single,Bunk', 'size|Size (sq ft)|number', 'amenities|Amenities|multi:AC,Wi-Fi,TV,Minibar,Balcony,Sea view,Bathtub,Kitchenette,Safe,Hair dryer', 'description|Description|textarea',
+  'name*|Room type|text', 'image|Photo|image', 'base_rate*|Base rate per night|money', 'max_adults|Max adults|number', 'max_children|Max children|number', 'bed|Bed|select:King,Queen,Twin,Double,Single,Bunk', 'size|Size (sq ft)|number', 'amenities|Amenities|multi:AC,Wi-Fi,TV,Minibar,Balcony,Sea view,Bathtub,Kitchenette,Safe,Hair dryer', 'description|Description|textarea',
 ]);
 E('hotel', 'rooms', 'Rooms', 'Every room you sell, its floor and current state.', [
   'number*|Room no.|text', 'room_type_id*|Room type|ref:room_types', 'floor|Floor|number', 'view|View|select:Sea,Garden,Pool,City,None', 'smoking|Smoking allowed|bool', 'status|Status|select:available,occupied,reserved,dirty,cleaning,out_of_order', 'notes|Notes|textarea',
@@ -142,7 +142,7 @@ E('hotel', 'meal_plans', 'Meal plans & packages', 'RO, BB, HB, FB, all-inclusive
   'code*|Code|text', 'name*|Name|text', 'price_per_person|Price per person / night|money', 'includes|Includes|textarea', 'status|Status|select:active,inactive',
 ], { title: 'name' });
 E('hotel', 'reservations', 'Reservations', 'All bookings — walk-in, phone, website and booking channels. Open one to see its folio.', [
-  'number|Booking no.|text', 'guest_id*|Guest|ref:customers', 'room_id|Room|ref:rooms', 'room_type_id|Room type|ref:room_types', 'check_in*|Check-in|date', 'check_out*|Check-out|date', 'adults|Adults|number', 'children|Children|number', 'meal_plan|Meal plan|select:RO,BB,HB,FB,AI', 'rate|Rate per night|money', 'source|Booked via|select:Walk-in,Phone,Website,Booking.com,Agoda,Expedia,Airbnb,Travel agent,Corporate', 'agent_id|Agent / company|ref:travel_agents', 'ota_ref|OTA / agent booking ref.|text', 'arrival_time|Expected arrival time|time', 'vehicle_no|Vehicle number|text', 'parking_slot_id|Parking slot|ref:parking_slots', 'advance|Advance paid|money', 'total|Room total|money', 'special_requests|Special requests|textarea', 'status|Status|select:confirmed,tentative,checked_in,checked_out,cancelled,no_show',
+  'number|Booking no.|text', 'guest_id*|Guest|ref:customers', 'room_id|Room|ref:rooms', 'room_type_id|Room type|ref:room_types', 'check_in*|Check-in|date', 'check_out*|Check-out|date', 'adults|Adults|number', 'children|Children|number', 'meal_plan|Meal plan|select:RO,BB,HB,FB,AI', 'rate|Rate per night|money', 'source|Booked via|select:Walk-in,Phone,Website,Booking.com,Agoda,Expedia,Trip.com,Airbnb,Travel agent,Corporate', 'agent_id|Agent / company|ref:travel_agents', 'ota_ref|OTA / agent booking ref.|text', 'arrival_time|Expected arrival time|time', 'vehicle_no|Vehicle number|text', 'parking_slot_id|Parking slot|ref:parking_slots', 'advance|Advance paid|money', 'total|Room total|money', 'special_requests|Special requests|textarea', 'status|Status|select:confirmed,tentative,checked_in,checked_out,cancelled,no_show',
 ], { title: 'number', prefix: 'BK-', cols: ['number', 'guest_id', 'room_id', 'check_in', 'check_out', 'source', 'total', 'status'], calendar: 'check_in' });
 E('hotel', 'folio_charges', 'Folio charges', 'Everything charged to a guest’s room bill.', [
   'reservation_id*|Booking|ref:reservations', 'description*|Description|text', 'category|Category|select:Room,Restaurant,Bar,Minibar,Laundry,Spa,Transport,Tour,Telephone,Other', 'amount*|Amount|money', 'date|Date|date', 'posted_by|Posted by|text',
@@ -163,7 +163,7 @@ E('hotel', 'minibar_items', 'Minibar', 'Items stocked in rooms and their prices.
   'name*|Item|text', 'price*|Price|money', 'stock|In store|number', 'par_level|Per room|number', 'status|Status|select:active,inactive',
 ]);
 E('hotel', 'extra_services', 'Extra services', 'Spa, tours, airport transfers and other add-ons you can charge to a room.', [
-  'name*|Service|text', 'category|Category|select:Spa,Tour,Transport,Dining,Activity,Other', 'price*|Price|money', 'unit|Charged per|select:person,trip,hour,item', 'status|Status|select:active,inactive',
+  'name*|Service|text', 'image|Photo|image', 'category|Category|select:Spa,Tour,Transport,Dining,Activity,Other', 'price*|Price|money', 'unit|Charged per|select:person,trip,hour,item', 'status|Status|select:active,inactive',
 ]);
 E('hotel', 'lost_found', 'Lost & found', 'Items found in rooms or public areas.', [
   'item*|Item|text', 'found_at|Found at|text', 'found_by|Found by|text', 'date|Date|date', 'owner|Owner (if known)|text', 'status|Status|select:stored,returned,disposed',
@@ -172,7 +172,7 @@ E('hotel', 'travel_agents', 'Corporate & agents', 'Travel agents and companies w
   'name*|Name|text', 'type|Type|select:Travel agent,Corporate,OTA', 'contact|Contact person|text', 'email|Email|email', 'phone|Phone|phone', 'commission|Commission|percent', 'credit_limit|Credit limit|money', 'balance|Balance due|money', 'status|Status|select:active,inactive',
 ]);
 E('hotel', 'channels', 'Channel manager', 'Online travel sites connected to your room inventory. Rates and availability sync automatically.', [
-  'name*|Channel|select:Booking.com,Agoda,Expedia,Airbnb,TripAdvisor,Google Hotels', 'property_id|Property ID|text', 'commission|Commission|percent', 'last_sync|Last sync|datetime', 'auto_sync|Auto sync|bool', 'status|Status|select:connected,disconnected,error',
+  'name*|Channel|select:Booking.com,Agoda,Expedia,Trip.com,Airbnb,TripAdvisor,Google Hotels,Hotels.com', 'property_id|Property ID|text', 'commission|Commission|percent', 'last_sync|Last sync|datetime', 'auto_sync|Auto sync|bool', 'status|Status|select:connected,disconnected,error',
 ]);
 E('hotel', 'night_audits', 'Night audits', 'End-of-day closings with room revenue and occupancy.', [
   'date*|Business date|date', 'occupied|Rooms occupied|number', 'occupancy|Occupancy|percent', 'room_revenue|Room revenue|money', 'other_revenue|Other revenue|money', 'closed_by|Closed by|text', 'status|Status|select:closed,open',
@@ -197,6 +197,9 @@ E('guestservices', 'guest_requests', 'Guest requests', 'Requests from rooms — 
 E('guestservices', 'service_calls', 'Table & room calls', 'Waiter calls and bill requests from the QR menu, for waiters to acknowledge.', [
   'place*|Table / room|text', 'kind|Call|select:Waiter,Bill,Water,Clean table,Room service', 'note|Note|text', 'created|At|datetime', 'handled_by|Handled by|text', 'status|Status|select:open,acknowledged,done',
 ], { title: 'place' });
+E('hotel', 'room_closures', 'Closed dates (stop sell)', 'Dates when a room type cannot be booked anywhere — website, front desk or online travel sites.', [
+  'room_type_id*|Room type|ref:room_types', 'date*|Date|date', 'reason|Reason|select:Sold out,Renovation,Private event,Owner use,Other', 'notes|Notes|text',
+], { title: 'date', cols: ['date', 'room_type_id', 'reason', 'notes'] });
 E('hotel', 'channel_sync_logs', 'Channel sync log', 'Every rate and availability update sent to online travel agents.', [
   'channel|Channel|text', 'action|Action|select:Availability update,Rate update,Booking received,Stop sell,Full sync', 'details|Details|text', 'date|At|datetime', 'by|By|text', 'status|Result|select:success,queued,failed',
 ], { title: 'channel', readonly: true });
@@ -209,8 +212,8 @@ E('restaurant', 'menu_categories', 'Menu categories', 'Groups on your menu such 
   'name*|Category|text', 'icon|Icon|text', 'order|Display order|number', 'station|Kitchen station|select:Hot kitchen,Cold kitchen,Bar,Bakery,Grill', 'status|Status|select:active,inactive',
 ]);
 E('restaurant', 'menu_items', 'Menu items', 'Dishes and drinks with price, kitchen station and availability.', [
-  'name*|Item|text', 'category_id*|Category|ref:menu_categories', 'price*|Price|money', 'cost|Food cost|money', 'icon|Icon|text', 'veg|Vegetarian|bool', 'spicy|Spice level|select:none,mild,medium,hot', 'prep_minutes|Prep time (min)|number', 'modifier_ids|Modifiers|refs:modifiers', 'description|Description|textarea', 'available|Available now|bool', 'status|Status|select:active,inactive',
-], { cols: ['name', 'category_id', 'price', 'cost', 'prep_minutes', 'available'] });
+  'name*|Dish / drink|text', 'image|Photo|image', 'category_id*|Category|ref:menu_categories', 'price*|Price|money', 'cost|Food cost|money', 'veg|Vegetarian|bool', 'spicy|Spice level|select:none,mild,medium,hot', 'prep_minutes|Prep time (min)|number', 'modifier_ids|Modifiers|refs:modifiers', 'description|Description|textarea', 'available|Available now|bool', 'status|Status|select:active,inactive',
+], { cols: ['image', 'name', 'category_id', 'price', 'prep_minutes', 'available'], singular: 'Dish' });
 E('restaurant', 'modifiers', 'Modifiers', 'Options a guest can add or change, like extra cheese or spice level.', [
   'name*|Modifier group|text', 'options|Options (comma separated)|text', 'price|Extra price|money', 'required|Must choose|bool', 'status|Status|select:active,inactive',
 ]);
@@ -227,7 +230,7 @@ E('restaurant', 'areas', 'Dining areas', 'Sections of the restaurant such as Ind
   'name*|Area|text', 'service_charge|Service charge|percent', 'status|Status|select:active,inactive',
 ]);
 E('restaurant', 'tables', 'Tables', 'Tables with seats and area. Each table gets its own QR code for ordering.', [
-  'name*|Table|text', 'area_id|Area|ref:areas', 'seats|Seats|number', 'shape|Shape|select:square,round,long', 'pos_x|Floor position — across (0-10)|number', 'pos_y|Floor position — down (0-6)|number', 'status|Status|select:free,occupied,reserved,bill_requested,cleaning',
+  'name*|Table|text', 'area_id|Area|ref:areas', 'seats|Seats|number', 'shape|Shape|select:square,round,long', 'pos_x|Floor position — across|number', 'pos_y|Floor position — down|number', 'rotation|Turned|select:0,90', 'status|Status|select:free,occupied,reserved,bill_requested,cleaning',
 ]);
 E('restaurant', 'table_reservations', 'Table reservations', 'Advance table bookings from phone, walk-in and website.', [
   'customer_name*|Guest name|text', 'phone|Phone|phone', 'date*|Date|date', 'time*|Time|time', 'guests|Guests|number', 'table_id|Table|ref:tables', 'occasion|Occasion|select:None,Birthday,Anniversary,Business,Date', 'notes|Notes|textarea', 'status|Status|select:booked,seated,completed,cancelled,no_show',

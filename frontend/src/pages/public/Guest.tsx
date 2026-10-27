@@ -24,7 +24,7 @@ const NotFound = ({ e }: any) => <div className="grid min-h-screen place-items-c
 // ------------------------------------------------------------------ QR MENU
 export function QRMenu() {
   const { slug = '', table } = useParams();
-  const { data, error } = useAsync<any>(() => api.pub(slug, 'menu'), [slug], { live: false });
+  const { data, error } = useAsync<any>(() => api.pub(slug, 'menu'), [slug], { live: true, poll: 20000 });
   const toast = useToast();
   const [cat, setCat] = useState('all'); const [q, setQ] = useState('');
   const [cart, setCart] = useState<Record<string, number>>({}); const [open, setOpen] = useState(false);
@@ -51,7 +51,7 @@ export function QRMenu() {
       <div className="grid gap-3 sm:grid-cols-2">
         {items.map((m: any) => (
           <div key={m.id} className={`flex gap-3 rounded-2xl bg-surface p-3 shadow-card ${!m.available ? 'opacity-50' : ''}`}>
-            <div className="grid h-20 w-20 shrink-0 place-items-center rounded-xl bg-paper text-4xl">{m.icon || '🍽️'}</div>
+            {m.image ? <img src={m.image} alt={m.name} className="h-24 w-24 shrink-0 rounded-xl bg-[#E7E0D2] object-cover" loading="lazy" /> : <div className="grid h-24 w-24 shrink-0 place-items-center rounded-xl bg-paper text-4xl">{m.icon || '🍽️'}</div>}
             <div className="min-w-0 flex-1"><div className="font-semibold">{m.name}</div><div className="line-clamp-2 text-xs text-muted">{m.description}</div><div className="mt-1 flex flex-wrap gap-1">{m.veg && <span className="chip bg-ok/10 text-[10px] text-ok">Vegetarian</span>}{m.spicy && m.spicy !== 'none' && <span className="chip bg-bad/10 text-[10px] text-bad">{pretty(m.spicy)}</span>}</div>
               <div className="mt-2 flex items-center justify-between"><b className="text-brand">{money(m.price)}</b>{table && (m.available ? (cart[m.id] ? <div className="flex items-center gap-2"><button className="btn-secondary h-8 w-8 p-0" onClick={() => set(m.id, -1)} aria-label="Less"><Minus className="h-4 w-4" /></button><b>{cart[m.id]}</b><button className="btn-primary h-8 w-8 p-0" onClick={() => set(m.id, 1)} aria-label="More"><Plus className="h-4 w-4" /></button></div> : <button className="btn-primary btn-sm" onClick={() => set(m.id, 1)}><Plus className="h-4 w-4" />Add</button>) : <span className="text-xs text-muted">Sold out</span>)}</div>
             </div>
@@ -82,7 +82,8 @@ const FOREST = '#1F3B2D', GOLD = '#D9B36A';
 const AMENITY_ICON: Record<string, any> = { AC: Snowflake, 'Wi-Fi': Wifi, TV: Tv, Minibar: Wine, Balcony: Sun, 'Sea view': Waves, Bathtub: Bath, Safe: Lock, 'Hair dryer': Wind, Kitchenette: UtensilsCrossed };
 export function BookOnline() {
   const { slug = '' } = useParams();
-  const site = useAsync<any>(() => api.pub(slug, 'site'), [slug], { live: false });
+  const site = useAsync<any>(() => api.pub(slug, 'site'), [slug], { live: true });
+  const cal = useAsync<any>(() => api.pub(slug, 'calendar', { days: 92 }), [slug], { live: true });
   const qp = new URLSearchParams(location.search);
   const [q, setQ] = useState({ check_in: qp.get('in') || addDays(today(), 1), check_out: qp.get('out') || addDays(today(), 3), guests: Number(qp.get('g') || 2) });
   const [res, setRes] = useState<any>(null); const [busy, setBusy] = useState(false); const [pick, setPick] = useState<any>(null); const [done, setDone] = useState<any>(null);
@@ -94,7 +95,7 @@ export function BookOnline() {
   if (!site.data) return <Spinner />;
   const biz = site.data.business; const w = site.data.website || {};
   const order: string[] = site.data.rooms.map((r: any) => r.id);
-  const photo = (t: any) => w.room_photos?.[t.id] || P.rooms[Math.max(0, order.indexOf(t.id)) % P.rooms.length];
+  const photo = (t: any) => t.image || w.room_photos?.[t.id] || P.rooms[Math.max(0, order.indexOf(t.id)) % P.rooms.length];
   const n = nightsBetween(q.check_in, q.check_out);
   const total = pick ? pick.base_rate * n : 0;
   const book = async () => {
@@ -136,6 +137,7 @@ export function BookOnline() {
           <label className="rounded-[18px] px-5 py-2.5 hover:bg-black/[0.03]"><span className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-black/50"><Users className="h-3.5 w-3.5" />Guests</span><select value={q.guests} onChange={(e) => setQ({ ...q, guests: Number(e.target.value) })} className="mt-0.5 block w-full bg-transparent text-base font-semibold outline-none">{[1, 2, 3, 4, 5, 6].map((x) => <option key={x} value={x}>{x} {x === 1 ? 'guest' : 'guests'}</option>)}</select></label>
           <button className="flex items-center justify-center gap-2 rounded-[18px] px-8 py-4 text-base font-semibold text-white" style={{ background: FOREST }}><Search className="h-4 w-4" />{busy ? 'Searching…' : 'Check availability'}</button>
         </form>
+        {cal.data && <AvailabilityCalendar days={cal.data.days} q={q} onPick={(ci: string, co: string) => { setQ({ ...q, check_in: ci, check_out: co }); }} onSearch={search} />}
         <div className="mt-5 flex flex-wrap gap-x-6 gap-y-2 text-sm text-black/70">{[[ShieldCheck, 'Best rate when you book direct'], [CreditCard, 'Pay online or at the hotel'], [ParkingSquare, 'Free private parking'], [Check, 'Instant confirmation']].map(([I, t]: any) => <span key={t} className="inline-flex items-center gap-2"><I className="h-4 w-4" style={{ color: FOREST }} />{t}</span>)}</div>
 
         <div className="mt-8 flex flex-wrap items-baseline justify-between gap-2"><h2 className="text-3xl font-semibold" style={SERIF}>{res ? `${res.types.filter((t: any) => t.available).length} rooms available` : 'Finding rooms…'}</h2>{res && <span className="text-black/60">{n} night{n > 1 ? 's' : ''} · {date(q.check_in)} – {date(q.check_out)} · {q.guests} guest{q.guests > 1 ? 's' : ''}</span>}</div>
@@ -192,6 +194,32 @@ export function BookOnline() {
           </section>
         )}
       </div>
+    </div>
+  );
+}
+
+// ------------------------------------------------------------------ AVAILABILITY CALENDAR
+function AvailabilityCalendar({ days, q, onPick, onSearch }: any) {
+  const toast = useToast(); const [open, setOpen] = useState(true); const [first, setFirst] = useState<string | null>(null);
+  const map: Record<string, number> = Object.fromEntries(days.map((d: any) => [d.date, d.free]));
+  const months = [0, 1].map((k) => { const d = new Date(days[0].date + 'T12:00'); d.setDate(1); d.setMonth(d.getMonth() + k); return d; });
+  const iso2 = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  const click = (ds: string) => {
+    if (!(map[ds] > 0)) return;
+    if (!first || ds <= first) { setFirst(ds); onPick(ds, addDays(ds, 1)); return; }
+    for (let d = first; d < ds; d = addDays(d, 1)) if (!(map[d] > 0)) { toast.err(`Sorry — we are fully booked on ${date(d)}. Please choose other dates.`); setFirst(ds); onPick(ds, addDays(ds, 1)); return; }
+    onPick(first, ds); setFirst(null); setTimeout(onSearch, 0);
+  };
+  return (
+    <div className="mt-5 rounded-[26px] bg-white p-5 shadow-sm">
+      <button className="flex w-full items-center justify-between text-left" onClick={() => setOpen(!open)}><span><span className="text-xl font-semibold" style={SERIF}>Availability calendar</span><span className="ml-3 text-sm text-black/60">{first ? 'Now tap your check-out date' : 'Tap your check-in date, then your check-out date'}</span></span><span className="text-sm font-semibold" style={{ color: FOREST }}>{open ? 'Hide' : 'Show'}</span></button>
+      {open && <><div className="mt-4 grid gap-6 md:grid-cols-2">{months.map((m) => { const first0 = new Date(m); const lead = (first0.getDay() + 6) % 7; const n = new Date(m.getFullYear(), m.getMonth() + 1, 0).getDate(); return (
+        <div key={m.toISOString()}><div className="mb-2 text-center font-semibold">{m.toLocaleDateString('en', { month: 'long', year: 'numeric' })}</div>
+          <div className="grid grid-cols-7 gap-1 text-center text-[11px] font-semibold text-black/45">{['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'].map((x) => <div key={x}>{x}</div>)}</div>
+          <div className="mt-1 grid grid-cols-7 gap-1">{Array.from({ length: lead }, (_, i) => <div key={'e' + i} />)}{Array.from({ length: n }, (_, i) => { const d = new Date(m.getFullYear(), m.getMonth(), i + 1); const ds = iso2(d); const free = map[ds]; const past = ds < today() || free === undefined; const full = !past && !(free > 0); const inRange = ds >= q.check_in && ds < q.check_out; const isIn = ds === q.check_in || ds === first;
+            return <button key={ds} disabled={past || full} onClick={() => click(ds)} title={full ? 'Fully booked' : free ? `${free} rooms free` : ''} className={`relative aspect-square rounded-lg text-sm font-semibold transition ${past ? 'text-black/20' : full ? 'cursor-not-allowed bg-red-50 text-red-300 line-through' : isIn ? 'text-white' : inRange ? 'text-[#1B231E]' : 'hover:bg-black/5'}`} style={isIn ? { background: FOREST } : inRange ? { background: '#E9DFC6' } : {}}>{i + 1}{!past && !full && free <= 2 && <span className="absolute bottom-0.5 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full" style={{ background: GOLD }} />}</button>; })}</div>
+        </div>); })}</div>
+      <div className="mt-4 flex flex-wrap gap-4 text-xs text-black/60"><span className="inline-flex items-center gap-1.5"><span className="h-3 w-3 rounded" style={{ background: FOREST }} />Your check-in</span><span className="inline-flex items-center gap-1.5"><span className="h-3 w-3 rounded" style={{ background: '#E9DFC6' }} />Your stay</span><span className="inline-flex items-center gap-1.5"><span className="h-3 w-3 rounded bg-red-50 ring-1 ring-red-200" />Fully booked — cannot be chosen</span><span className="inline-flex items-center gap-1.5"><span className="h-1.5 w-1.5 rounded-full" style={{ background: GOLD }} />Last rooms</span></div></>}
     </div>
   );
 }

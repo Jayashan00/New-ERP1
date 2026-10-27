@@ -33,7 +33,10 @@ The website uses high-quality photos from **Unsplash** (free for commercial use,
 - **A / A+ / A++** button in the top bar makes all text bigger.
 - Each screen shows short **How to use** steps the first time, with a **Got it** button.
 - The demo has just one or two examples of each activity, so nothing is confusing. The hotel’s set-up (18 rooms, menu, 18 tables, 24 parking bays, staff logins) is complete.
-- 3D restaurant built with **three.js + GSAP**: real lighting and shadows, tap a table to choose it, drag to look around, “Reset view” and “From above”.
+- **Table layout editor (2D):** Restaurant → Tables & floor plan → **Edit layout**. Add round/square/long tables, drag them into place, add or remove chairs, change shape, turn or remove tables. Guests book from the same floor plan on the website.
+- **Website editor:** Administration → Website editor (Owner and General manager). Every section's words and photos can be changed: slideshow, welcome, rooms (photo, name, description, price), dining, menu photos, wellness & tours, Explore Kandy places, reviews background, contact and map.
+- **Menu photos:** every dish has a photo. The chef and restaurant manager can change photos and descriptions in Menu items; the QR menus and website update immediately.
+- **No double bookings:** a room can only be booked once for any night — from the website, front desk or any travel site. **Closed dates** (Online & channels → Channel manager, tap a day) stop a room type being sold anywhere. Fully booked days are crossed out in the website calendar. Every booking or cancellation automatically queues an availability update to Booking.com, Agoda, Expedia, Trip.com, Airbnb, Google and TripAdvisor (live delivery needs the channel-manager connection in the backend phase).
 
 ## Structure
 `frontend/` React website & ERP (deploy to Vercel) · `shared/` all business rules · `backend/` Node API for phase 2.
