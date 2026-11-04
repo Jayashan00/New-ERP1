@@ -230,7 +230,7 @@ const ACTIONS = {
     const free = ACTIONS.availableRooms.call(this, { check_in: p.check_in, check_out: p.check_out, ready: !!p.check_in_now });
     if (!free.some((r) => r.id === p.room_id)) bad(p.check_in_now ? 'That room is not clean and free right now. Pick a room marked Available.' : 'That room is no longer free for those dates. Pick another room.');
     const room = this.find('rooms', p.room_id); const rt = this.find('room_types', room.room_type_id);
-    const rate = Number(p.rate || rt.base_rate);
+    const rate = Number(p.rate || ACTIONS.nightlyRate.call(this, { room_type_id: rt.id, check_in: p.check_in, check_out: p.check_out }).average);
     const res = this.create('reservations', { guest_id: guestId, room_id: room.id, room_type_id: rt.id, check_in: p.check_in, check_out: p.check_out, adults: p.adults || 1, children: p.children || 0, meal_plan: p.meal_plan || 'BB', rate, source: p.source || 'Walk-in', agent_id: p.agent_id || '', ota_ref: p.ota_ref || '', arrival_time: p.arrival_time || '', vehicle_no: p.vehicle_no || '', advance: Number(p.advance || 0), special_requests: p.special_requests || '', status: p.status || 'confirmed' });
     if (p.parking_slot_id && p.vehicle_no) ACTIONS.parkVehicle.call(this, { slot_id: p.parking_slot_id, vehicle_no: p.vehicle_no, reservation_id: res.id, purpose: 'Hotel guest', reserve: !p.check_in_now, driver: this.find('customers', guestId)?.name });
     if (Number(p.advance) > 0) this.s.insert('folio_payments', { id: newId(), businessId: this.biz, created_at: nowStamp(), reservation_id: res.id, amount: Number(p.advance), method: p.advance_method || 'Card', reference: 'ADV' + Date.now().toString().slice(-5), date: today(), type: 'advance' });
@@ -306,9 +306,11 @@ const ACTIONS = {
     req(this, 'reservations', 'e');
     const r = this.find('reservations', reservation_id); if (!r) notFound('Booking');
     if (!['confirmed', 'tentative'].includes(r.status)) bad('Only upcoming bookings can be cancelled.');
+    const fee = ACTIONS.cancellationFee.call(this, { reservation_id: r.id, status });
     this.s.update('reservations', r.id, { ...r, status }); this.queueChannelSync(`Booking ${r.number} ${status} — room released ${r.check_in} → ${r.check_out}`);
+    if (fee.amount > 0) this.s.insert('folio_charges', { id: newId(), businessId: this.biz, created_at: nowStamp(), reservation_id: r.id, date: today(), category: 'Other', description: fee.label, qty: 1, amount: fee.amount, total: fee.amount });
     const room = this.find('rooms', r.room_id); if (room && room.status === 'reserved') this.s.update('rooms', room.id, { ...room, status: 'available' });
-    this.audit('updated', 'reservations', r.number + ' ' + status); return { ok: true };
+    this.audit('updated', 'reservations', r.number + ' ' + status); return { ok: true, fee: fee.amount, message: fee.amount > 0 ? `${status === 'no_show' ? 'No-show' : 'Cancellation'} fee of ${fee.amount} charged under the policy “${fee.policy}”.` : 'Cancelled with no fee.' };
   },
   moveRoom({ reservation_id, room_id }) {
     req(this, 'reservations', 'e');
@@ -366,7 +368,70 @@ const ACTIONS = {
     const types = this.rows('room_types'); const rooms = this.rows('rooms'); const plans = this.rows('rate_plans');
     const dates = Array.from({ length: days }, (_, i) => iso(new Date(new Date((start || today()) + 'T12:00').getTime() + i * 864e5)));
     const res = this.rows('reservations').filter((r) => !['cancelled', 'no_show', 'checked_out'].includes(r.status));
-    return { dates, types: types.map((t) => ({ id: t.id, name: t.name, total: rooms.filter((r) => r.room_type_id === t.id && r.status !== 'out_of_order').length, cells: dates.map((d) => { const sold = res.filter((r) => r.room_type_id === t.id && r.check_in <= d && r.check_out > d).length; const total = rooms.filter((r) => r.room_type_id === t.id && r.status !== 'out_of_order').length; const plan = plans.find((pl) => pl.room_type_id === t.id && pl.status === 'active' && pl.start <= d && pl.end >= d); const closed = this.rows('room_closures').some((c) => c.room_type_id === t.id && c.date === d); return { date: d, available: closed ? 0 : Math.max(0, total - sold), sold, closed, rate: plan?.rate || t.base_rate }; }) })), channels: this.rows('channels') };
+    return { dates, types: types.map((t) => ({ id: t.id, name: t.name, total: rooms.filter((r) => r.room_type_id === t.id && r.status !== 'out_of_order').length, cells: dates.map((d) => { const sold = res.filter((r) => r.room_type_id === t.id && r.check_in <= d && r.check_out > d).length; const total = rooms.filter((r) => r.room_type_id === t.id && r.status !== 'out_of_order').length; const plan = plans.find((pl) => pl.room_type_id === t.id && pl.status === 'active' && pl.start <= d && pl.end >= d); const closed = this.rows('room_closures').some((c) => c.room_type_id === t.id && c.date === d); const ov = this.rows('rate_overrides').find((o) => o.room_type_id === t.id && o.date === d); return { date: d, available: closed ? 0 : Math.max(0, total - sold), sold, closed, rate: ov ? Number(ov.rate) : plan?.rate || t.base_rate, override: !!ov }; }) })), channels: this.rows('channels') };
+  },
+  nightlyRate({ room_type_id, check_in, check_out }) {
+    const rt = this.find('room_types', room_type_id); if (!rt) return { average: 0, nights: [] };
+    const overrides = this.rows('rate_overrides').filter((o) => o.room_type_id === rt.id); const plans = this.rows('rate_plans').filter((x) => x.status !== 'inactive' && (!x.room_type_id || x.room_type_id === rt.id));
+    const out = []; for (let d = check_in; d < check_out; d = iso(new Date(new Date(d + 'T12:00').getTime() + 864e5))) { const ov = overrides.find((o) => o.date === d); const pl = plans.find((x) => x.start && x.end && x.start <= d && x.end >= d); out.push({ date: d, rate: ov ? Number(ov.rate) : pl ? Number(pl.rate) : Number(rt.base_rate) }); }
+    return { average: out.length ? Math.round(out.reduce((s, x) => s + x.rate, 0) / out.length) : Number(rt.base_rate), nights: out };
+  },
+  setRateOverride({ room_type_id, date, rate, reason = 'Other' }) {
+    req(this, 'rate_overrides', 'c'); const ex = this.rows('rate_overrides').find((o) => o.room_type_id === room_type_id && o.date === date); const t = this.find('room_types', room_type_id);
+    if (!rate || Number(rate) <= 0) { if (ex) this.s.remove('rate_overrides', ex.id); this.queueChannelSync(`Price for ${t?.name} on ${date} back to normal`, null, 'Rate update'); return { message: `${t?.name} on ${date} uses the normal price again.` }; }
+    if (ex) this.s.update('rate_overrides', ex.id, { ...ex, rate: Number(rate), reason }); else this.s.insert('rate_overrides', { id: newId(), businessId: this.biz, created_at: nowStamp(), room_type_id, date, rate: Number(rate), reason });
+    this.queueChannelSync(`Price for ${t?.name} on ${date}: ${rate}`, null, 'Rate update'); return { message: `${t?.name} on ${date} is now ${rate}. All channels will be updated.` };
+  },
+  cancellationFee({ reservation_id, status = 'cancelled' }) {
+    const r = this.find('reservations', reservation_id); if (!r) notFound('Booking');
+    const policies = this.rows('booking_policies'); const pol = (r.policy_id && policies.find((p) => p.id === r.policy_id)) || policies.find((p) => p.is_default) || policies[0];
+    if (!pol) return { amount: 0, policy: 'none', label: '' };
+    const stay = Number(r.rate || 0) * Math.max(1, nights(r.check_in, r.check_out)); const daysBefore = Math.floor((new Date(r.check_in + 'T12:00') - new Date(today() + 'T12:00')) / 864e5);
+    const pct = status === 'no_show' ? Number(pol.no_show_fee_percent || 0) : daysBefore < Number(pol.free_cancel_days || 0) ? Number(pol.late_cancel_fee_percent || 0) : 0;
+    return { amount: round(stay * pct / 100), policy: pol.name, label: `${status === 'no_show' ? 'No-show' : 'Late cancellation'} fee (${pct}% — ${pol.name})`, percent: pct, daysBefore, free_cancel_days: pol.free_cancel_days };
+  },
+  createGroupBooking({ group, room_ids = [], guest }) {
+    req(this, 'group_bookings', 'c'); if (!group?.name) bad('Give the group a name.'); if (!room_ids.length) bad('Choose at least one room.');
+    const g = { id: newId(), businessId: this.biz, created_at: nowStamp(), status: 'confirmed', rooms: room_ids.length, meal_plan: 'BB', ...group };
+    this.s.insert('group_bookings', g); const made = [];
+    for (const room_id of room_ids) { const res = ACTIONS.createBooking.call(this, { guest, room_id, check_in: g.check_in, check_out: g.check_out, adults: 2, rate: g.rate || undefined, meal_plan: g.meal_plan, source: g.agent_id ? 'Travel agent' : 'Phone', agent_id: g.agent_id, special_requests: `Group: ${g.name}` }); this.s.update('reservations', res.id, { ...res, group_id: g.id }); made.push(res.number); }
+    this.audit('created', 'group_bookings', g.name); return { id: g.id, bookings: made, message: `Group “${g.name}” created with ${made.length} rooms (${made.join(', ')}).` };
+  },
+  groupBill({ group_id }) {
+    req(this, 'group_bookings'); const g = this.find('group_bookings', group_id); if (!g) notFound('Group');
+    const res = this.rows('reservations').filter((r) => r.group_id === g.id); const rows = res.map((r) => { const f = ACTIONS.folio.call(this, { reservation_id: r.id }); const expected = f.total > 0 ? f.total : round(Number(r.rate || 0) * Math.max(1, nights(r.check_in, r.check_out)) * 1.3098); return { number: r.number, room: f.room?.number, guest: f.guest ? `${f.guest.first_name || ''} ${f.guest.last_name || ''}`.trim() || f.guest.name : '', status: r.status, total: expected, paid: f.paid, balance: round(expected - f.paid) }; });
+    return { group: g, agent: g.agent_id ? this.find('travel_agents', g.agent_id) : null, rows, total: rows.reduce((s, x) => s + x.total, 0), paid: rows.reduce((s, x) => s + x.paid, 0), balance: rows.reduce((s, x) => s + x.balance, 0) };
+  },
+  openShift({ opening_float = 0 }) {
+    req(this, 'cashier_shifts', 'c'); const open = this.rows('cashier_shifts').find((x) => x.status === 'open' && x.cashier === this.user.name); if (open) bad('You already have an open shift. Close it first.');
+    const sh = { id: newId(), businessId: this.biz, created_at: nowStamp(), cashier: this.user.name, opened_at: nowStamp(), opening_float: Number(opening_float), status: 'open' }; this.s.insert('cashier_shifts', sh); return sh;
+  },
+  shiftSummary({ shift_id }) {
+    req(this, 'cashier_shifts'); const sh = shift_id ? this.find('cashier_shifts', shift_id) : this.rows('cashier_shifts').find((x) => x.status === 'open' && x.cashier === this.user.name); if (!sh) return null;
+    const from = sh.opened_at, to = sh.closed_at || nowStamp(); const methods = {}; const add = (m, a) => { const k = /cash/i.test(m || '') ? 'Cash' : /room|ledger/i.test(m || '') ? 'Room charge' : /visa|master|card|amex/i.test(m || '') ? 'Card' : m || 'Other'; methods[k] = (methods[k] || 0) + Number(a || 0); };
+    let orders = 0; for (const o of this.rows('restaurant_orders').filter((o) => o.status === 'paid' && (o.paid_at || o.date) >= from && (o.paid_at || o.date) <= to)) { orders++; if (Array.isArray(o.payments) && o.payments.length) o.payments.forEach((p) => add(p.method, p.amount)); else add(o.payment_method || o.method, o.total); }
+    let folioPays = 0; for (const p of this.rows('folio_payments').filter((p) => p.type !== 'refund' && (p.created_at || p.date) >= from && (p.created_at || p.date) <= to)) { folioPays++; add(p.method, p.amount); }
+    const cash = methods.Cash || 0; return { shift: sh, methods, orders, folioPays, cash_sales: cash, expected_cash: round(Number(sh.opening_float || 0) + cash), card_total: methods.Card || 0, room_total: methods['Room charge'] || 0, other_total: Object.entries(methods).filter(([k]) => !['Cash', 'Card', 'Room charge'].includes(k)).reduce((s, [, v]) => s + v, 0), total: Object.values(methods).reduce((s, v) => s + v, 0) };
+  },
+  closeShift({ shift_id, counted_cash, notes = '' }) {
+    req(this, 'cashier_shifts', 'e'); const sum = ACTIONS.shiftSummary.call(this, { shift_id }); if (!sum) bad('No open shift.');
+    const sh = { ...sum.shift, closed_at: nowStamp(), expected_cash: sum.expected_cash, counted_cash: Number(counted_cash), difference: round(Number(counted_cash) - sum.expected_cash), card_total: sum.card_total, other_total: sum.other_total, room_total: sum.room_total, notes, status: 'closed' };
+    this.s.update('cashier_shifts', sh.id, sh); this.audit('closed', 'cashier_shifts', `${sh.cashier} — difference ${sh.difference}`); return { ...sum, shift: sh };
+  },
+  arAgeing() {
+    req(this, 'page:ar-ageing'); const t0 = new Date(today() + 'T12:00'); const rows = [];
+    for (const r of this.rows('reservations').filter((r) => r.status === 'checked_out')) { const f = ACTIONS.folio.call(this, { reservation_id: r.id }); if (f.balance > 0.5) rows.push({ kind: 'Guest bill', ref: r.number, party: f.guest ? `${f.guest.first_name || ''} ${f.guest.last_name || ''}`.trim() || f.guest.name : '', since: r.check_out, amount: f.balance }); }
+    for (const a of this.rows('travel_agents').filter((a) => Number(a.balance) > 0)) rows.push({ kind: 'Agent / corporate', ref: a.type || 'Agent', party: a.name, since: a.updated_at ? String(a.updated_at).slice(0, 10) : today(), amount: Number(a.balance) });
+    for (const i of this.rows('sales_invoices').filter((i) => ['sent', 'overdue', 'partial', 'unpaid'].includes(i.status))) rows.push({ kind: 'Invoice', ref: i.number, party: this.find('customers', i.customer_id)?.name || i.customer_name || '', since: i.due_date || i.date, amount: Number(i.total || 0) - Number(i.paid || 0) });
+    for (const x of rows) { x.days = Math.max(0, Math.floor((t0 - new Date(String(x.since).slice(0, 10) + 'T12:00')) / 864e5)); x.bucket = x.days <= 30 ? '0-30' : x.days <= 60 ? '31-60' : x.days <= 90 ? '61-90' : '90+'; }
+    const buckets = { '0-30': 0, '31-60': 0, '61-90': 0, '90+': 0 }; rows.forEach((x) => { buckets[x.bucket] += x.amount; });
+    return { rows: rows.sort((a, b) => b.days - a.days), buckets, total: rows.reduce((s, x) => s + x.amount, 0) };
+  },
+  epfEtf({ month }) {
+    req(this, 'page:epf-etf'); const m = month || this.rows('payslips').map((p) => p.month).sort().pop();
+    const rows = this.rows('payslips').filter((p) => p.month === m).map((p) => { const e = this.find('employees', p.employee_id); const basic = Number(p.basic ?? p.basic_salary ?? e?.salary ?? 0); return { employee: e?.name || '', nic: e?.nic || '', basic, epf_employee: round(basic * 0.08), epf_employer: round(basic * 0.12), etf: round(basic * 0.03) }; });
+    const sum = (k) => round(rows.reduce((s, r) => s + r[k], 0));
+    return { month: m, rows, totals: { basic: sum('basic'), epf_employee: sum('epf_employee'), epf_employer: sum('epf_employer'), etf: sum('etf'), epf_total: round(sum('epf_employee') + sum('epf_employer')) } };
   },
   toggleClosure({ room_type_id, date, reason = 'Sold out' }) {
     req(this, 'room_closures', 'c');
@@ -770,7 +835,7 @@ export function publicService(store, slug) {
     rooms: ({ check_in, check_out, guests = 1 }) => {
       const free = ACTIONS.availableRooms.call(sys, { check_in, check_out });
       const types = sys.rows('room_types');
-      return { business: pub, nights: nights(check_in, check_out), types: types.map((t) => ({ ...t, available: free.filter((r) => r.room_type_id === t.id).length })).filter((t) => (t.max_adults || 2) + (t.max_children || 0) >= Number(guests)) };
+      return { business: pub, nights: nights(check_in, check_out), types: types.map((t) => ({ ...t, base_rate: ACTIONS.nightlyRate.call(sys, { room_type_id: t.id, check_in, check_out }).average || t.base_rate, available: free.filter((r) => r.room_type_id === t.id).length })).filter((t) => (t.max_adults || 2) + (t.max_children || 0) >= Number(guests)) };
     },
     book: ({ room_type_id, check_in, check_out, guest, adults, children, meal_plan, special_requests, pay_now, gateway }) => {
       if (!guest?.name || !guest?.email) throw new ApiError(422, 'Enter your name and email.');
@@ -778,7 +843,7 @@ export function publicService(store, slug) {
       if (!free.length) throw new ApiError(422, 'Sorry, that room type just sold out for those dates.');
       const rt = sys.find('room_types', room_type_id);
       const existing = sys.rows('customers').find((c) => c.email && c.email.toLowerCase() === guest.email.toLowerCase());
-      const total = rt.base_rate * nights(check_in, check_out);
+      const total = ACTIONS.nightlyRate.call(sys, { room_type_id: rt.id, check_in, check_out }).average * nights(check_in, check_out);
       const res = ACTIONS.createBooking.call(sys, { guest_id: existing?.id, guest: existing ? undefined : { ...guest, type: 'individual' }, room_id: free[0].id, check_in, check_out, adults, children, meal_plan, rate: rt.base_rate, source: 'Website', special_requests, advance: pay_now ? total : 0, advance_method: 'Online' });
       return { number: res.number, total, paid: pay_now ? total : 0, gateway: pay_now ? gateway || 'Stripe' : null, room_type: rt.name, check_in, check_out };
     },
@@ -793,7 +858,7 @@ export function publicService(store, slug) {
     },
     form: ({ id }) => { const f = sys.find('forms', id); if (!f || f.status !== 'active') throw new ApiError(404, 'This form is closed.'); return { business: pub, form: { id: f.id, name: f.name, description: f.description, fields: String(f.fields || '').split('\n').filter(Boolean).map((l) => { const i = l.lastIndexOf(':'); return { label: l.slice(0, i), type: l.slice(i + 1) || 'text' }; }) } }; },
     submitForm: ({ id, answers, name }) => { const f = sys.find('forms', id); if (!f) throw new ApiError(404, 'Form not found.'); store.insert('form_responses', { id: newId(), businessId: b.id, created_at: nowStamp(), form_id: f.id, submitted_by: name || 'Anonymous', answers: Object.entries(answers || {}).map(([k, v]) => `${k}: ${v}`).join('\n'), date: nowStamp() }); store.update('forms', f.id, { ...f, responses: (f.responses || 0) + 1 }); return { ok: true }; },
-    site: () => ({ business: pub, website: st.website || {}, rooms: sys.rows('room_types'), menu: sys.rows('menu_items').filter((m) => m.status === 'active' && m.available !== false).slice(0, 12), tables_count: sys.rows('tables').length, categories: sys.rows('menu_categories'), services: sys.rows('extra_services').filter((x) => x.status === 'active'), reviews: sys.rows('feedback').filter((f) => f.rating >= 4 && f.comment).slice(0, 6) }),
+    site: () => ({ business: pub, website: st.website || {}, rooms: sys.rows('room_types'), menu: sys.rows('menu_items').filter((m) => m.status === 'active' && m.available !== false).slice(0, 12), tables_count: sys.rows('tables').length, currencies: sys.rows('currencies').filter((c) => c.status !== 'inactive'), policy: sys.rows('booking_policies').find((p) => p.is_default) || sys.rows('booking_policies')[0] || null, categories: sys.rows('menu_categories'), services: sys.rows('extra_services').filter((x) => x.status === 'active'), reviews: sys.rows('feedback').filter((f) => f.rating >= 4 && f.comment).slice(0, 6) }),
     calendar: ({ from, days = 62, room_type_id }) => {
       const start = from || today(); const types = sys.rows('room_types').filter((t) => !room_type_id || t.id === room_type_id);
       const rooms = sys.rows('rooms').filter((r) => r.status !== 'out_of_order'); const res = sys.rows('reservations').filter((r) => !['cancelled', 'no_show', 'checked_out'].includes(r.status)); const closures = sys.rows('room_closures');

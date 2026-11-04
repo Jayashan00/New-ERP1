@@ -5,13 +5,13 @@
 //  LIVE mode (VITE_API_URL set): calls the Node.js backend.
 //  Both modes run the exact same shared service code.
 // =====================================================================
-import { buildSeed } from '@shared/seed.js';
+import { buildSeed, buildEmpty } from '@shared/seed.js';
 import { MemoryStore } from '@shared/memstore.js';
 import { Service, publicService, landingData, safeUser } from '@shared/service.js';
 
 const API = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
 export const MODE: 'demo' | 'live' = API ? 'live' : 'demo';
-const DB_KEY = 'ceylon-ayu-erp-db-v4';
+const DB_KEY = 'ceylon-ayu-erp-db-v5';
 const SESSION_KEY = 'ceylon-ayu-session';
 
 export class HttpError extends Error { status: number; constructor(status: number, msg: string) { super(msg); this.status = status; } }
@@ -119,5 +119,10 @@ export const api = {
   async resetDemo() {
     if (MODE === 'live') { const r = await http('POST', '/api/admin/reset-demo', {}); emit(); return r; }
     localStorage.removeItem(DB_KEY); store = null; demoStore(); emit(); return { ok: true, message: 'Demo data restored.' };
+  },
+  /** Wipe the demo and start with an empty hotel (settings + owner login only). */
+  async startEmpty() {
+    if (MODE === 'live') { const r = await http('POST', '/api/admin/start-empty', {}); emit(); return r; }
+    const db = buildEmpty(); localStorage.setItem(DB_KEY, JSON.stringify(db)); store = null; demoStore(); emit(); return { ok: true, message: 'Your hotel is empty and ready to set up.' };
   },
 };

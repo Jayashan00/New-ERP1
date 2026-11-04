@@ -226,6 +226,7 @@ function genValue(f, ent, i, ctx) {
 
 const dueOrPast = () => dateOff(ri(-20, 10));
 
+export function buildEmpty() { const db = buildSeed(); return pruneToEmpty(db); }
 export function buildSeed() {
   seed = 42; idc = 1000;
   const db = { users: [], roles: [], settings: [], notifications: [], messages: [] };
@@ -572,6 +573,14 @@ export function buildSeed() {
   }
   for (let i = 0; i < 20; i++) { const u = pick(db.users); db.login_history.push({ id: nid(), user_name: u.name, role: u.role, ip: `112.134.${ri(1, 254)}.${ri(1, 254)}`, device: pick(['Chrome on Windows', 'Safari on iPhone', 'Chrome on Android']), date: dtOff(-ri(0, 10)), status: rnd() > 0.1 ? 'success' : 'failed' }); }
   for (const b of BIZ) for (let i = 0; i < 12; i++) { const u = pick(db.users.filter((x) => x.businessId === b.id)); db.audit_log.push({ id: nid(), businessId: b.id, user_name: u.name, action: pick(['created', 'updated', 'deleted', 'checked_in', 'paid', 'approved']), entity: pick(['Reservations', 'Orders', 'Products', 'Invoices', 'Leave applications']), record: '#' + ri(1000, 9999), date: dtOff(-ri(0, 7)) }); }
+  // policies, currencies, a sample group booking and an event
+  const A = (key, rec) => add(key, rec, 'b1');
+  const pol = (name, dep, free, late, ns, text, def) => A('booking_policies', { name, deposit_percent: dep, free_cancel_days: free, late_cancel_fee_percent: late, no_show_fee_percent: ns, text, is_default: def });
+  pol('Flexible', 0, 2, 50, 100, 'Free cancellation up to 2 days before arrival. Later cancellations are charged 50% of the stay; no-shows 100%.', true);
+  pol('Non-refundable (10% off)', 100, 0, 100, 100, 'Pay in full at booking for a 10% discount. This rate cannot be cancelled or refunded.', false);
+  pol('Peak season', 30, 7, 100, 100, 'A 30% deposit secures your room. Free cancellation up to 7 days before arrival.', false);
+  [['LKR', 'Sri Lankan rupee', 'Rs', 1], ['USD', 'US dollar', '$', 0.0033], ['EUR', 'Euro', '€', 0.0031], ['GBP', 'British pound', '£', 0.0026], ['INR', 'Indian rupee', '₹', 0.28], ['AUD', 'Australian dollar', 'A$', 0.0051], ['CNY', 'Chinese yuan', '¥', 0.024]].forEach(([code, name, symbol, rate]) => A('currencies', { code, name, symbol, rate, status: 'active' }));
+  A('events_bookings', { name: 'Perera–Fernando wedding reception', client: 'Dinesh Perera', phone: '+94 77 456 7890', email: 'dinesh@example.com', date: dateOff(21), start: '18:00', end: '23:00', venue: 'Garden lawn', pax: 120, rate_per_person: 6500, extras: 150000, deposit: 200000, status: 'confirmed', menu: 'Sri Lankan buffet with seafood station · welcome drinks · wedding cake table', notes: 'Stage and lighting by client’s decorator. Parking: reserve Coach bay.' });
   pruneToExamples(db);
   db.platform_settings = [{ id: 'platform', data: { app_name: 'NexaERP', support_email: 'support@nexaerp.com', default_language: 'English', default_currency: 'LKR', allow_signup: true, email_verification: false, maintenance_mode: false, cookie_consent: true, cookie_text: 'We use cookies to improve your experience.', seo_title: 'NexaERP — Hotel, Restaurant & Retail ERP', seo_description: 'All-in-one ERP for hotels, restaurants, shops and companies.', storage: 'Local', cache_driver: 'file', pusher_enabled: false, gateways: Object.fromEntries(PAYMENT_GATEWAYS.map((g, i) => [g, { enabled: i < 4 || g === 'Bank transfer', mode: 'sandbox' }])) } }];
   return db;
@@ -688,4 +697,22 @@ function pruneToExamples(db) {
     db[e.key] = db[e.key].filter((r) => e.fields.every((f) => !(f.t === 'ref' && f.req && r[f.k] && ids[f.ref] && !ids[f.ref].has(r[f.k]))));
     for (const r of db[e.key]) for (const f of e.fields) { if (f.t === 'ref' && r[f.k] && ids[f.ref] && !ids[f.ref].has(r[f.k])) r[f.k] = ''; if (f.t === 'refs' && Array.isArray(r[f.k]) && ids[f.ref]) r[f.k] = r[f.k].filter((x) => ids[f.ref].has(x)); }
   }
+}
+
+// =====================================================================
+//  Empty hotel: keep only settings, roles, the owner login and reference lists,
+//  so a new hotel can set itself up with the setup wizard.
+// =====================================================================
+function pruneToEmpty(db) {
+  const keep = new Set(['businesses', 'plans', 'roles', 'settings', 'platform_settings', 'taxes', 'payment_methods', 'leave_types', 'salary_components', 'departments', 'designations', 'shifts', 'meal_plans', 'loyalty_tiers', 'channels', 'accounts', 'currencies', 'booking_policies', 'menu_categories', 'areas', 'transport_vendors', 'helpdesk_categories', 'notification_templates', 'email_templates', 'training_types', 'contract_types', 'job_locations', 'interview_rounds', 'holidays', 'review_cycles']);
+  const owner = buildSeedUsersFromDemo(db);
+  for (const k of Object.keys(db)) if (Array.isArray(db[k]) && !keep.has(k)) db[k] = [];
+  db.users = owner;
+  const b = db.businesses?.[0]; if (b) Object.assign(b, { name: 'My Hotel', address: '', phone: '', email: '', city: '' });
+  const st = db.settings?.find((x) => x.businessId === 'b1'); if (st?.data) { st.data.website = { ...st.data.website, hero_title: 'My Hotel', hero_tagline: 'a warm welcome awaits', hero_subtitle: 'Edit this text in Administration → Website editor.', about: 'Tell your guests about your hotel here.', explore: [], hero_slides: [], welcome_photos: [], dining_photos: [] }; st.data.fresh = true; }
+  return db;
+}
+function buildSeedUsersFromDemo(db) {
+  const owner = (db.users || []).find((u) => u.role === 'super_admin' || /^owner@/.test(u.email)) || (db.users || [])[0];
+  return owner ? [{ ...owner, name: 'Owner', employeeId: '' }] : [];
 }

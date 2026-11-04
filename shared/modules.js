@@ -21,14 +21,14 @@ export const MODULES = [
     key: 'hotel', label: 'Front office', icon: 'ConciergeBell',
     items: [
       pg('front-desk', 'Front desk', 'ConciergeBell'), pg('room-chart', 'Room chart', 'CalendarRange'), pg('new-booking', 'New booking / walk-in', 'CalendarPlus'),
-      en('reservations', 'Reservations'), en('customers', 'Guests'), pg('guest-billing', 'Guest billing & invoices', 'Receipt'),
+      en('reservations', 'Reservations'), en('customers', 'Guests'), pg('guest-billing', 'Guest billing & invoices', 'Receipt'), pg('groups', 'Group bookings', 'Users'), en('events_bookings', 'Banquets & events'), en('group_bookings', 'Group list'),
       en('folio_charges', 'Room bill charges'), en('folio_payments', 'Guest payments'), en('registration_cards', 'Registration cards'),
       pg('night-audit', 'Night audit', 'MoonStar'), en('night_audits', 'Night audit history'),
     ],
   },
   {
     key: 'distribution', label: 'Online & channels', icon: 'Globe', needs: 'hotel',
-    items: [pg('booking-engine', 'Website booking engine', 'Globe'), pg('channel-manager', 'Channel manager', 'Share2'), en('room_closures', 'Closed dates (stop sell)'), en('channels', 'Connected channels (OTAs)'), en('channel_sync_logs', 'Channel sync log'), en('travel_agents', 'Travel agents & corporate'), en('rate_plans', 'Rate plans & seasons'), en('meal_plans', 'Meal plans & packages')],
+    items: [pg('booking-engine', 'Website booking engine', 'Globe'), pg('channel-manager', 'Channel manager', 'Share2'), en('room_closures', 'Closed dates (stop sell)'), en('rate_overrides', 'Prices by date'), en('allotments', 'Agent allotments'), en('booking_policies', 'Cancellation & deposit policies'), en('channels', 'Connected channels (OTAs)'), en('channel_sync_logs', 'Channel sync log'), en('travel_agents', 'Travel agents & corporate'), en('rate_plans', 'Rate plans & seasons'), en('meal_plans', 'Meal plans & packages')],
   },
   {
     key: 'rooms', label: 'Rooms & housekeeping', icon: 'BedDouble', needs: 'hotel',
@@ -45,7 +45,7 @@ export const MODULES = [
       en('restaurant_orders', 'Orders'), en('kots', 'KOT history'), en('table_reservations', 'Table bookings'), en('waitlist', 'Waitlist'),
       en('menu_items', 'Menu items'), en('menu_categories', 'Menu categories'), en('modifiers', 'Modifiers'), en('combos', 'Set menus & combos'),
       en('recipes', 'Recipes & food cost'), en('ingredients', 'Kitchen stock'), en('bar_stock', 'Bar stock'), en('tables', 'Tables'), en('areas', 'Dining areas'),
-      en('riders', 'Delivery riders'), en('aggregators', 'Delivery apps'), pg('qr-codes', 'Table QR codes', 'QrCode'), pg('restaurant-reports', 'Restaurant reports', 'PieChart'),
+      en('riders', 'Delivery riders'), en('aggregators', 'Delivery apps'), pg('qr-codes', 'Table QR codes', 'QrCode'), pg('restaurant-reports', 'Restaurant reports', 'PieChart'), pg('shift-close', 'Cashier shift & Z-report', 'Wallet'), en('cashier_shifts', 'Cashier shifts'),
     ],
   },
   {
@@ -61,7 +61,7 @@ export const MODULES = [
     items: [
       pg('accounting-dashboard', 'Finance overview', 'TrendingUp'), en('revenues', 'Other income'), en('expenses', 'Expenses'), en('vendor_payments', 'Supplier payments'),
       en('bank_accounts', 'Bank & cash accounts'), en('bank_transactions', 'Bank transactions'), en('bank_transfers_internal', 'Bank transfers'), en('accounts', 'Chart of accounts'), en('journal_entries', 'Journal entries'),
-      pg('profit-loss', 'Profit & loss', 'TrendingUp'), pg('balance-sheet', 'Balance sheet', 'FileSpreadsheet'), pg('trial-balance', 'Trial balance', 'Scale'), pg('ledger', 'Ledger', 'BookOpen'), pg('tax-report', 'Tax report (VAT)', 'Percent'),
+      pg('profit-loss', 'Profit & loss', 'TrendingUp'), pg('balance-sheet', 'Balance sheet', 'FileSpreadsheet'), pg('trial-balance', 'Trial balance', 'Scale'), pg('ledger', 'Ledger', 'BookOpen'), pg('tax-report', 'Tax report (VAT)', 'Percent'), pg('ar-ageing', 'Who owes us (AR ageing)', 'Clock'),
       en('budgets', 'Budgets'), pg('budget-monitor', 'Budget monitoring', 'Gauge'),
     ],
   },
@@ -70,7 +70,7 @@ export const MODULES = [
     items: [
       pg('hrm-dashboard', 'HR overview', 'Users'), en('employees', 'Staff'), en('departments', 'Departments'), en('designations', 'Job titles'),
       en('attendance', 'Attendance'), en('shifts', 'Shifts'), en('rosters', 'Duty roster'), en('leave_applications', 'Leave requests'), pg('leave-balance', 'Leave balance', 'CalendarCheck'), en('leave_types', 'Leave types'),
-      pg('run-payroll', 'Run payroll', 'Banknote'), en('payslips', 'Payslips'), en('salary_components', 'Allowances & deductions'),
+      pg('run-payroll', 'Run payroll', 'Banknote'), pg('epf-etf', 'EPF / ETF return', 'FileSpreadsheet'), en('payslips', 'Payslips'), en('salary_components', 'Allowances & deductions'),
       en('holidays', 'Holidays'), en('announcements', 'Announcements'), en('events', 'Staff events'), en('documents', 'HR documents'),
       en('trainings', 'Training'), en('trainers', 'Trainers'), en('reviews', 'Performance reviews'), en('awards', 'Awards'), en('warnings', 'Warnings'), en('resignations', 'Resignations'),
       en('jobs', 'Job vacancies'), en('candidates', 'Job applicants'),
@@ -79,7 +79,7 @@ export const MODULES = [
   {
     key: 'admin', label: 'Administration', icon: 'Settings', always: true,
     items: [
-      pg('users', 'Users & logins', 'UserCog'), pg('roles', 'Roles & permissions', 'ShieldCheck'), pg('settings', 'Hotel settings', 'Settings'), pg('website', 'Website & photos', 'Image'),
+      pg('users', 'Users & logins', 'UserCog'), pg('roles', 'Roles & permissions', 'ShieldCheck'), pg('settings', 'Hotel settings', 'Settings'), pg('website', 'Website & photos', 'Image'), pg('setup', 'Hotel setup wizard', 'Sparkles'), pg('translations', 'Languages & translations', 'Globe'), en('currencies', 'Currencies & exchange rates'), pg('help', 'Help & user guide', 'HelpCircle'),
       pg('payment-gateways', 'Payment gateways', 'CreditCard'), pg('integrations', 'Integrations', 'Plug'), en('taxes', 'Taxes'), en('payment_methods', 'Payment methods'), en('printers', 'Printers'),
       en('audit_log', 'Activity log'), en('login_history', 'Login history'),
     ],
@@ -88,16 +88,16 @@ export const MODULES = [
 
 // Everyday tasks stay in the menu; everything else sits behind "More" so the menu stays short.
 const PRIMARY = {
-  hotel: ['front-desk', 'new-booking', 'room-chart', 'reservations', 'customers', 'guest-billing', 'night-audit'],
-  distribution: ['booking-engine', 'channel-manager', 'room_closures', 'travel_agents', 'rate_plans'],
+  hotel: ['front-desk', 'new-booking', 'room-chart', 'reservations', 'customers', 'guest-billing', 'groups', 'events_bookings', 'night-audit'],
+  distribution: ['booking-engine', 'channel-manager', 'room_closures', 'rate_overrides', 'travel_agents', 'rate_plans'],
   rooms: ['housekeeping-board', 'rooms', 'room-qr', 'maintenance'],
   guestservices: ['guest_requests', 'transport_bookings', 'parking'],
-  restaurant: ['restaurant-pos', 'floor-plan', 'service-board', 'kitchen-display', 'table_reservations', 'restaurant_orders', 'menu_items'],
+  restaurant: ['restaurant-pos', 'floor-plan', 'service-board', 'kitchen-display', 'table_reservations', 'restaurant_orders', 'menu_items', 'shift-close'],
   customers: ['feedback', 'promotions'],
   purchase: ['purchase_orders', 'grns', 'vendors', 'stock-levels'],
-  accounting: ['accounting-dashboard', 'expenses', 'profit-loss', 'bank_accounts'],
+  accounting: ['accounting-dashboard', 'expenses', 'profit-loss', 'ar-ageing', 'bank_accounts'],
   hrm: ['hrm-dashboard', 'employees', 'attendance', 'rosters', 'leave_applications', 'run-payroll'],
-  admin: ['users', 'roles', 'settings', 'website'],
+  admin: ['users', 'roles', 'settings', 'website', 'setup', 'help'],
 };
 for (const m of MODULES) { const keep = PRIMARY[m.key]; if (!keep) continue; for (const it of m.items) it.more = !keep.includes(it.type === 'entity' ? it.entity : it.page); }
 

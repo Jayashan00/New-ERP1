@@ -12,7 +12,7 @@ const ALL = 'vced';
 const V = 'v';
 
 const STAFF_BASE = {
-  'page:dashboard': V, 'page:calendar': V, 'page:messenger': V,
+  'page:dashboard': V, 'page:calendar': V, 'page:messenger': V, 'page:help': V,
   'page:my-attendance': V, 'page:my-leaves': V, 'page:my-payslips': V, 'page:my-tasks': V,
   notes: ALL, announcements: V, events: V, holidays: V, kb_articles: V, meetings: V,
 };
@@ -36,12 +36,12 @@ export const DEFAULT_ROLES = [
   {
     key: 'front_office', name: 'Receptionist', dashboard: 'frontdesk', color: '#3B82F6',
     desc: 'Bookings, check-in with ID, room bills, payments, check-out, guest requests, taxis and parking.',
-    grants: { ...STAFF_BASE, 'page:front-desk': V, 'page:room-chart': V, 'page:new-booking': V, 'page:guest-billing': V, 'page:housekeeping-board': V, 'page:booking-engine': V, 'page:parking': V, 'page:room-qr': V, reservations: 'vce', customers: 'vce', folio_charges: 'vc', folio_payments: 'vc', registration_cards: 'vc', rooms: 've', room_types: V, rate_plans: V, meal_plans: V, extra_services: V, travel_agents: V, housekeeping: 'vc', maintenance: 'vc', laundry: 'vce', lost_found: 'vce', minibar_items: V, guest_requests: 'vce', transport_bookings: 'vce', transport_vendors: V, parking_slots: 've', parking_logs: 'vce', service_calls: 've', feedback: 'vc', table_reservations: 'vc', gift_cards: V, channels: V },
+    grants: { 'page:groups': V, group_bookings: 'vce', events_bookings: 'vce', booking_policies: V, ...STAFF_BASE, 'page:front-desk': V, 'page:room-chart': V, 'page:new-booking': V, 'page:guest-billing': V, 'page:housekeeping-board': V, 'page:booking-engine': V, 'page:parking': V, 'page:room-qr': V, reservations: 'vce', customers: 'vce', folio_charges: 'vc', folio_payments: 'vc', registration_cards: 'vc', rooms: 've', room_types: V, rate_plans: V, meal_plans: V, extra_services: V, travel_agents: V, housekeeping: 'vc', maintenance: 'vc', laundry: 'vce', lost_found: 'vce', minibar_items: V, guest_requests: 'vce', transport_bookings: 'vce', transport_vendors: V, parking_slots: 've', parking_logs: 'vce', service_calls: 've', feedback: 'vc', table_reservations: 'vc', gift_cards: V, channels: V },
   },
   {
     key: 'reservations_agent', name: 'Reservations & channels', dashboard: 'frontdesk', color: '#0EA5E9',
     desc: 'Website, travel-agent and OTA bookings, rates, availability and the channel manager.',
-    grants: { ...STAFF_BASE, 'mod:distribution': ALL, 'page:room-chart': V, 'page:new-booking': V, 'page:front-desk': V, reservations: 'vce', customers: 'vce', folio_payments: 'vc', rooms: V, room_types: 've', promotions: 'vce' },
+    grants: { 'page:groups': V, group_bookings: 'vced', ...STAFF_BASE, 'mod:distribution': ALL, 'page:room-chart': V, 'page:new-booking': V, 'page:front-desk': V, reservations: 'vce', customers: 'vce', folio_payments: 'vc', rooms: V, room_types: 've', promotions: 'vce' },
   },
   {
     key: 'housekeeping', name: 'Housekeeping', dashboard: 'housekeeping', color: '#14B8A6',
@@ -61,7 +61,7 @@ export const DEFAULT_ROLES = [
   {
     key: 'cashier', name: 'Cashier', dashboard: 'cashier', color: '#CA8A04',
     desc: 'Settles restaurant bills, room charges and guest payments.',
-    grants: { ...STAFF_BASE, 'page:restaurant-pos': V, 'page:floor-plan': V, 'page:guest-billing': V, restaurant_orders: 'vce', customers: 'vc', gift_cards: V, promotions: V, menu_items: V, menu_categories: V, tables: 've', areas: V, kots: V, reservations: V, folio_payments: 'vc', service_calls: 've' },
+    grants: { ...STAFF_BASE, 'page:restaurant-pos': V, 'page:floor-plan': V, 'page:guest-billing': V, 'page:shift-close': V, cashier_shifts: 'vce', restaurant_orders: 'vce', customers: 'vc', gift_cards: V, promotions: V, menu_items: V, menu_categories: V, tables: 've', areas: V, kots: V, reservations: V, folio_payments: 'vc', service_calls: 've' },
   },
   {
     key: 'waiter', name: 'Waiter / Steward', dashboard: 'waiter', color: '#D97706',

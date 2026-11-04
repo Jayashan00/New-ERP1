@@ -88,12 +88,14 @@ export function BookOnline() {
   const [q, setQ] = useState({ check_in: qp.get('in') || addDays(today(), 1), check_out: qp.get('out') || addDays(today(), 3), guests: Number(qp.get('g') || 2) });
   const [res, setRes] = useState<any>(null); const [busy, setBusy] = useState(false); const [pick, setPick] = useState<any>(null); const [done, setDone] = useState<any>(null);
   const [g, setG] = useState({ first: '', last: '', email: '', phone: '', country: '', arrival: '', special_requests: '', pay_now: true, gateway: 'PayHere' });
+  const [curCode, setCurCode] = useState('');
   const toast = useToast();
   const search = async () => { setBusy(true); try { setRes(await api.pub(slug, 'rooms', q)); setPick(null); } catch (e) { toast.err(e); } finally { setBusy(false); } };
   useEffect(() => { if (site.data) search(); }, [site.data]);
   if (site.error) return <NotFound e={site.error} />;
   if (!site.data) return <Spinner />;
-  const biz = site.data.business; const w = site.data.website || {};
+  const biz = site.data.business; const w = site.data.website || {}; const currencies: any[] = site.data.currencies || []; const policy = site.data.policy;
+  const base = biz.currency || currencies.find((c) => Number(c.rate) === 1)?.code || 'LKR'; const cur = currencies.find((c) => c.code === curCode) || null; const conv = (v: number) => (cur && cur.rate && cur.code !== base ? `${cur.symbol || cur.code} ${(v * Number(cur.rate)).toLocaleString('en', { maximumFractionDigits: 0 })}` : money(v));
   const order: string[] = site.data.rooms.map((r: any) => r.id);
   const photo = (t: any) => t.image || w.room_photos?.[t.id] || P.rooms[Math.max(0, order.indexOf(t.id)) % P.rooms.length];
   const n = nightsBetween(q.check_in, q.check_out);
@@ -137,8 +139,9 @@ export function BookOnline() {
           <label className="rounded-[18px] px-5 py-2.5 hover:bg-black/[0.03]"><span className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-black/50"><Users className="h-3.5 w-3.5" />Guests</span><select value={q.guests} onChange={(e) => setQ({ ...q, guests: Number(e.target.value) })} className="mt-0.5 block w-full bg-transparent text-base font-semibold outline-none">{[1, 2, 3, 4, 5, 6].map((x) => <option key={x} value={x}>{x} {x === 1 ? 'guest' : 'guests'}</option>)}</select></label>
           <button className="flex items-center justify-center gap-2 rounded-[18px] px-8 py-4 text-base font-semibold text-white" style={{ background: FOREST }}><Search className="h-4 w-4" />{busy ? 'Searching…' : 'Check availability'}</button>
         </form>
+        {policy && <p className="mt-3 flex items-start gap-2 text-sm text-black/65"><ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" style={{ color: FOREST }} /><span><b>{policy.name} policy:</b> {policy.text}</span></p>}
         {cal.data && <AvailabilityCalendar days={cal.data.days} q={q} onPick={(ci: string, co: string) => { setQ({ ...q, check_in: ci, check_out: co }); }} onSearch={search} />}
-        <div className="mt-5 flex flex-wrap gap-x-6 gap-y-2 text-sm text-black/70">{[[ShieldCheck, 'Best rate when you book direct'], [CreditCard, 'Pay online or at the hotel'], [ParkingSquare, 'Free private parking'], [Check, 'Instant confirmation']].map(([I, t]: any) => <span key={t} className="inline-flex items-center gap-2"><I className="h-4 w-4" style={{ color: FOREST }} />{t}</span>)}</div>
+        <div className="mt-5 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-black/70">{[[ShieldCheck, 'Best rate when you book direct'], [CreditCard, 'Pay online or at the hotel'], [ParkingSquare, 'Free private parking'], [Check, 'Instant confirmation']].map(([I, t]: any) => <span key={t} className="inline-flex items-center gap-2"><I className="h-4 w-4" style={{ color: FOREST }} />{t}</span>)}{currencies.length > 1 && <label className="ml-auto inline-flex items-center gap-2">Show prices in <select className="rounded-lg border border-black/15 bg-white px-2 py-1 text-sm font-semibold" value={curCode || biz.currency} onChange={(e) => setCurCode(e.target.value)}>{currencies.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}</select></label>}</div>
 
         <div className="mt-8 flex flex-wrap items-baseline justify-between gap-2"><h2 className="text-3xl font-semibold" style={SERIF}>{res ? `${res.types.filter((t: any) => t.available).length} rooms available` : 'Finding rooms…'}</h2>{res && <span className="text-black/60">{n} night{n > 1 ? 's' : ''} · {date(q.check_in)} – {date(q.check_out)} · {q.guests} guest{q.guests > 1 ? 's' : ''}</span>}</div>
         <div className="mt-5 space-y-5">
@@ -152,7 +155,7 @@ export function BookOnline() {
                 <div className="mt-4 flex flex-wrap gap-2">{(t.amenities || []).map((a: string) => { const I = AMENITY_ICON[a] || Check; return <span key={a} className="inline-flex items-center gap-1.5 rounded-full border border-black/10 px-3 py-1 text-sm"><I className="h-3.5 w-3.5" style={{ color: FOREST }} />{a}</span>; })}</div>
               </div>
               <div className="flex flex-col justify-between gap-4 border-t border-black/5 p-6 md:w-64 md:border-l md:border-t-0">
-                <div className="md:text-right"><div className="text-xs uppercase tracking-wider text-black/50">Per night</div><div className="text-3xl font-bold">{money(t.base_rate)}</div><div className="text-sm text-black/60">{money(t.base_rate * n)} for {n} night{n > 1 ? 's' : ''}</div><div className="text-xs text-black/45">+ taxes & service charge</div></div>
+                <div className="md:text-right"><div className="text-xs uppercase tracking-wider text-black/50">Per night</div><div className="text-3xl font-bold">{conv(t.base_rate)}</div><div className="text-sm text-black/60">{conv(t.base_rate * n)} for {n} night{n > 1 ? 's' : ''}</div>{cur && cur.code !== base && <div className="text-[11px] text-black/45">≈ charged in {base} {money(t.base_rate)}</div>}<div className="text-xs text-black/45">+ taxes & service charge</div></div>
                 {t.available ? <button onClick={() => { setPick(t); setTimeout(() => document.getElementById('guest-details')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50); }} className="rounded-2xl px-5 py-3.5 text-base font-semibold text-white transition hover:brightness-110" style={{ background: pick?.id === t.id ? '#8A6A2E' : FOREST }}>{pick?.id === t.id ? 'Selected ✓' : 'Select this room'}</button> : <span className="rounded-2xl bg-black/5 px-5 py-3.5 text-center font-semibold text-black/50">Sold out for these dates</span>}
               </div>
             </article>
@@ -187,6 +190,7 @@ export function BookOnline() {
                 <div className="mt-3 space-y-1.5 text-sm"><div className="flex justify-between"><span className="text-black/60">Check-in</span><b>{date(q.check_in)}</b></div><div className="flex justify-between"><span className="text-black/60">Check-out</span><b>{date(q.check_out)}</b></div><div className="flex justify-between"><span className="text-black/60">Guests</span><b>{q.guests}</b></div><div className="flex justify-between"><span className="text-black/60">{money(pick.base_rate)} × {n} night{n > 1 ? 's' : ''}</span><b>{money(total)}</b></div></div>
                 <div className="mt-4 flex items-baseline justify-between border-t border-black/10 pt-4"><span className="font-semibold">Room total</span><span className="text-2xl font-bold">{money(total)}</span></div>
                 <p className="mt-1 text-xs text-black/50">Service charge, VAT and tourism levy are added on your final bill.</p>
+                {policy && <p className="mt-2 rounded-lg bg-[#F6F1E7] p-2 text-xs text-black/65"><b>{policy.name}:</b> {policy.text}</p>}
                 <button onClick={book} className="mt-5 w-full rounded-2xl px-5 py-4 text-base font-semibold shadow-md transition hover:brightness-105" style={{ background: GOLD, color: '#1B231E' }}>{g.pay_now ? `Pay ${money(total)} & confirm` : 'Confirm booking'}</button>
                 <p className="mt-3 flex items-center justify-center gap-1.5 text-xs text-black/50"><Lock className="h-3.5 w-3.5" />Secure booking</p>
               </div>

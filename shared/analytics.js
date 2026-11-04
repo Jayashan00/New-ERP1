@@ -161,7 +161,7 @@ function computeDashboardRaw(svc) {
     }
     const dirty = h.statusCounts.dirty || 0; if (dirty) D.alerts.push({ text: `${pl(dirty, 'room needs', 'rooms need')} cleaning before ${dirty === 1 ? 'it' : 'they'} can be sold`, to: '/app/housekeeping-board', tone: 'warn' });
     D.actions = [{ label: 'Check a guest in', to: '/app/front-desk', icon: 'ConciergeBell' }, { label: 'Make a new booking', to: '/app/new-booking', icon: 'CalendarPlus' }, { label: 'Take a payment / check out', to: '/app/guest-billing', icon: 'Receipt' }, { label: 'See all rooms by date', to: '/app/room-chart', icon: 'CalendarRange' }, { label: 'Book a taxi', to: '/app/e/transport_bookings?new=1', icon: 'Car' }, { label: 'Park a guest’s car', to: '/app/parking', icon: 'ParkingSquare' }];
-    if (type === 'hotel') D.actions.push({ label: 'Update prices on booking sites', to: '/app/channel-manager', icon: 'Share2' }, { label: 'Close the day (night audit)', to: '/app/night-audit', icon: 'MoonStar' });
+    if (type === 'hotel') D.actions.push({ label: 'Group booking (many rooms)', to: '/app/e/group_bookings?new=1', icon: 'Users' }, { label: 'Update prices on booking sites', to: '/app/channel-manager', icon: 'Share2' }, { label: 'Close the day (night audit)', to: '/app/night-audit', icon: 'MoonStar' });
     return D;
   }
 
@@ -220,7 +220,7 @@ function computeDashboardRaw(svc) {
       D.kpis = [{ label: 'Restaurant takings today', value: r.salesToday, fmt: 'money' }, s && { label: 'Shop takings today', value: s.salesToday, fmt: 'money' }, { label: 'Bills to settle', value: r.open.filter((o) => ['served', 'ready'].includes(o.status)).length, tone: 'warn' }, s && { label: 'Held sales', value: s.sales.filter((x) => x.status === 'held').length }].filter(Boolean);
       D.charts.push({ title: 'Payment methods today', type: 'pie', data: toPie(sumByKey(all, (x) => x.m || 'Other', (x) => x.t)), fmt: 'money' });
       D.lists.push({ title: 'Tables waiting to pay', link: '/app/restaurant-pos', columns: ['Table', 'Order', 'Amount', 'Status'], rows: r.open.filter((o) => ['served', 'ready'].includes(o.status) || r.tables.find((t) => t.id === o.table_id)?.status === 'bill_requested').map((o) => [table(o.table_id), o.number, { money: o.total }, { status: o.status }]), empty: 'No open bills.' });
-      D.actions = [{ label: 'Take payment for a table', to: '/app/restaurant-pos', icon: 'MonitorSmartphone' }, { label: 'Guest room bills', to: '/app/guest-billing', icon: 'Receipt' }, { label: 'See all tables', to: '/app/floor-plan', icon: 'LayoutGrid' }];
+      D.actions = [{ label: 'Take payment for a table', to: '/app/restaurant-pos', icon: 'MonitorSmartphone' }, { label: 'Open / close my shift (Z-report)', to: '/app/shift-close', icon: 'Wallet' }, { label: 'Guest room bills', to: '/app/guest-billing', icon: 'Receipt' }, { label: 'See all tables', to: '/app/floor-plan', icon: 'LayoutGrid' }];
       return D;
     }
     // restaurant manager
@@ -283,7 +283,7 @@ function computeDashboardRaw(svc) {
     D.charts.push({ title: 'Expenses by category (30d)', type: 'pie', data: pl.expenseLines.map((l) => ({ name: l.name, value: round(l.amount) })), fmt: 'money' });
     D.lists.push({ title: 'Unpaid invoices', link: '/app/e/sales_invoices', columns: ['Invoice', 'Customer', 'Due', 'Amount due', 'Status'], rows: inv.filter((i) => !['paid', 'draft'].includes(i.status)).sort((a, b) => a.due_date.localeCompare(b.due_date)).slice(0, 8).map((i) => [i.number, cust(i.customer_id), { date: i.due_date }, { money: i.total - (i.paid || 0) }, { status: i.due_date < today() ? 'overdue' : i.status }]) });
     D.lists.push({ title: 'Bills to pay', link: '/app/e/purchase_invoices', columns: ['Bill', 'Supplier', 'Due', 'Amount due'], rows: bills.filter((i) => !['paid', 'draft'].includes(i.status)).slice(0, 8).map((i) => [i.number, R('vendors').find((v) => v.id === i.vendor_id)?.name, { date: i.due_date }, { money: i.total - (i.paid || 0) }]) });
-    D.actions = [{ label: 'Record an expense', to: '/app/e/expenses?new=1', icon: 'Wallet' }, { label: 'Pay a supplier bill', to: '/app/e/purchase_invoices', icon: 'Receipt' }, { label: 'Guest room bills', to: '/app/guest-billing', icon: 'ConciergeBell' }, { label: 'Profit & loss', to: '/app/profit-loss', icon: 'TrendingUp' }, { label: 'VAT report', to: '/app/tax-report', icon: 'Percent' }];
+    D.actions = [{ label: 'Record an expense', to: '/app/e/expenses?new=1', icon: 'Wallet' }, { label: 'Pay a supplier bill', to: '/app/e/purchase_invoices', icon: 'Receipt' }, { label: 'Who owes us (AR ageing)', to: '/app/ar-ageing', icon: 'Clock' }, { label: 'Profit & loss', to: '/app/profit-loss', icon: 'TrendingUp' }, { label: 'VAT report', to: '/app/tax-report', icon: 'Percent' }];
     return D;
   }
 
@@ -298,7 +298,7 @@ function computeDashboardRaw(svc) {
     D.lists.push({ title: 'Leave waiting for approval', link: '/app/e/leave_applications', columns: ['Employee', 'Type', 'From', 'Days'], rows: pend.map((l) => [emp(l.employee_id), R('leave_types').find((t) => t.id === l.leave_type_id)?.name, { date: l.start }, l.days]), empty: 'No pending requests.' });
     D.lists.push({ title: 'Recruitment pipeline', link: '/app/e/candidates', columns: ['Stage', 'Candidates'], rows: Object.entries(count(R('candidates'), 'stage')).map(([k, v]) => [pretty(k), v]) });
     D.lists.push({ title: 'Upcoming holidays', link: '/app/e/holidays', columns: ['Holiday', 'Date'], rows: R('holidays').filter((h) => h.date >= today()).sort((a, b) => a.date.localeCompare(b.date)).slice(0, 5).map((h) => [h.name, { date: h.date }]) });
-    D.actions = [{ label: 'Approve leave', to: '/app/e/leave_applications', icon: 'CalendarCheck' }, { label: 'Who is at work today', to: '/app/e/attendance', icon: 'Clock' }, { label: 'Make the duty roster', to: '/app/e/rosters', icon: 'CalendarDays' }, { label: 'Pay salaries', to: '/app/run-payroll', icon: 'Banknote' }, { label: 'Add a staff member', to: '/app/e/employees?new=1', icon: 'UserPlus' }];
+    D.actions = [{ label: 'Approve leave', to: '/app/e/leave_applications', icon: 'CalendarCheck' }, { label: 'Who is at work today', to: '/app/e/attendance', icon: 'Clock' }, { label: 'Make the duty roster', to: '/app/e/rosters', icon: 'CalendarDays' }, { label: 'Pay salaries', to: '/app/run-payroll', icon: 'Banknote' }, { label: 'EPF / ETF return', to: '/app/epf-etf', icon: 'FileSpreadsheet' }, { label: 'Add a staff member', to: '/app/e/employees?new=1', icon: 'UserPlus' }];
     return D;
   }
 

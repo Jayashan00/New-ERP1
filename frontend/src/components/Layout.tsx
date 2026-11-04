@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useRef, useState, ReactNode } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate, Link } from 'react-router-dom';
-import { Bell, Menu, Search, Moon, Sun, LogOut, ChevronDown, X, Building2, KeyRound, UserCircle, RefreshCw, Users, Command } from 'lucide-react';
+import { Bell, Menu, Search, Moon, Sun, LogOut, ChevronDown, X, Building2, KeyRound, UserCircle, RefreshCw, Users, Command, HelpCircle } from 'lucide-react';
 import { MODULES, permKeyOf, pathOf } from '@shared/modules.js';
 import { DEMO_USERS, DEMO_PASSWORD, DEFAULT_ROLES } from '@shared/roles.js';
 import { useAuth } from '@/lib/auth';
+import { useLang, LANGS, setCustomTranslations } from '@/lib/i18n';
 import { api, MODE } from '@/lib/api';
 import { useAsync } from '@/lib/hooks';
 import { useToast } from '@/lib/toast';
@@ -35,6 +36,7 @@ export function useMenu() {
 }
 
 function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
+  const { t } = useLang();
   const menu = useMenu();
   const loc = useLocation();
   const { me } = useAuth();
@@ -57,17 +59,17 @@ function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
             <div key={m.key} className="mt-1">
               {!single && (
                 <button onClick={() => setOpen({ ...open, [m.key]: !isOpen })} className={`flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-[13px] font-semibold hover:bg-side-hover ${activeModule === m.key ? 'text-white' : ''}`} aria-expanded={isOpen}>
-                  <Icon name={m.icon} className="h-4 w-4 opacity-80" /><span className="flex-1 truncate">{m.label}</span><ChevronDown className={`h-3.5 w-3.5 opacity-60 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+                  <Icon name={m.icon} className="h-4 w-4 opacity-80" /><span className="flex-1 truncate">{t(m.label)}</span><ChevronDown className={`h-3.5 w-3.5 opacity-60 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
                 </button>
               )}
               {(single || isOpen) && (
                 <div className={single ? '' : 'ml-3 border-l border-white/10 pl-2'}>
                   {m.items.filter((it: any) => !it.more || more[m.key] || loc.pathname.startsWith(pathOf(it))).map((it: any) => (
                     <NavLink key={pathOf(it)} to={pathOf(it)} onClick={onNavigate} className={({ isActive }) => `relative flex items-center gap-2.5 rounded-lg px-2.5 py-[7px] text-[13px] transition-colors ${isActive ? 'bg-white/10 font-semibold text-white' : 'hover:bg-side-hover hover:text-white'}`}>
-                      {({ isActive }) => (<>{isActive && <span className="absolute -left-[9px] top-1.5 bottom-1.5 w-[3px] rounded-full bg-saffron" />}{single && <Icon name={it.icon || m.icon} className="h-4 w-4 opacity-80" />}<span className="truncate">{it.label}</span></>)}
+                      {({ isActive }) => (<>{isActive && <span className="absolute -left-[9px] top-1.5 bottom-1.5 w-[3px] rounded-full bg-saffron" />}{single && <Icon name={it.icon || m.icon} className="h-4 w-4 opacity-80" />}<span className="truncate">{t(it.label)}</span></>)}
                     </NavLink>
                   ))}
-                  {m.items.some((it: any) => it.more) && <button onClick={() => setMore({ ...more, [m.key]: !more[m.key] })} className="flex w-full items-center gap-2 rounded-lg px-2.5 py-[7px] text-left text-[12px] font-semibold text-side-text/70 hover:bg-side-hover hover:text-white">{more[m.key] ? '− Fewer options' : `+ More options (${m.items.filter((it: any) => it.more).length})`}</button>}
+                  {m.items.some((it: any) => it.more) && <button onClick={() => setMore({ ...more, [m.key]: !more[m.key] })} className="flex w-full items-center gap-2 rounded-lg px-2.5 py-[7px] text-left text-[12px] font-semibold text-side-text/70 hover:bg-side-hover hover:text-white">{more[m.key] ? '− ' + t('Fewer options') : `+ ${t('More options')} (${m.items.filter((it: any) => it.more).length})`}</button>}
                 </div>
               )}
             </div>
@@ -143,6 +145,8 @@ function RoleSwitcher() {
 }
 
 function Topbar({ onMenu, onSearch }: { onMenu: () => void; onSearch: () => void }) {
+  const { lang, setLang } = useLang();
+  const { me: meT } = useAuth(); useEffect(() => { setCustomTranslations(meT?.settings?.translations || {}); }, [meT?.settings?.translations]);
   const { me, isSuper, switchBusiness, logout } = useAuth();
   const nav = useNavigate(); const toast = useToast(); const confirm = useConfirm();
   const [dark, setDark] = useState(() => document.documentElement.classList.contains('dark'));
@@ -164,6 +168,8 @@ function Topbar({ onMenu, onSearch }: { onMenu: () => void; onSearch: () => void
           </Dropdown>
         )}
         <RoleSwitcher />
+        <Link to="/app/help" className="btn-ghost p-2" aria-label="Help" title="Help & user guide"><HelpCircle className="h-5 w-5" /></Link>
+        <select value={lang} onChange={(e) => setLang(e.target.value)} aria-label="Language" title="Language" className="hidden h-9 rounded-lg border border-line bg-surface px-2 text-sm sm:block">{Object.entries(LANGS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select>
         <button className="btn-ghost px-2.5 py-2 font-bold" onClick={() => setScale(scale === '17' ? '19' : scale === '19' ? '21' : '17')} aria-label="Change text size" title="Make text bigger or smaller">{scale === '17' ? 'A' : scale === '19' ? 'A+' : 'A++'}</button>
         <button className="btn-ghost p-2" onClick={toggleDark} aria-label="Toggle dark mode">{dark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}</button>
         {me?.business && <Notifications />}

@@ -40,3 +40,13 @@ On the sign-in page every role is also a **one-click button**. After signing in,
 5. **Try another role → Receptionist** → Guest billing → room 101 → see the charge, print the bill and registration card.
 6. **Owner** → Dashboard, Channel manager, Parking, Roles & permissions.
 Tip: open steps 2–4 in tabs of the **same browser** — they update each other live.
+
+
+## New in this version
+- Cashier → **Open / close my shift (Z-report)**: open with float, pay a bill in cash, close and print.
+- Receptionist / FOM → **Group bookings** → New group booking → tick rooms → **Master bill**.
+- FOM / Reservations → **Channel manager**: tap a price to set a special price (★); tap a number to close the day.
+- Folio → **Cancel booking** shows the fee under the policy before you confirm.
+- Accountant → **Who owes us (AR ageing)**. HR → **EPF / ETF return**.
+- Top bar: **language** (English / සිංහල / தமிழ்), **?** help with the user guide PDF.
+- Owner → **Hotel setup wizard** → *Start with an empty hotel* to show how any hotel is set up in minutes (then *Restore demo data* to get Ceylon Ayu back).

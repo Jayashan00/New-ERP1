@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { useLang } from '@/lib/i18n';
 import { AlertTriangle, Info, XCircle, ArrowUpRight } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useAsync } from '@/lib/hooks';
@@ -31,7 +32,7 @@ export function ListCard({ l }: { l: any }) {
 }
 
 export default function Dashboard() {
-  const { me } = useAuth();
+  const { me } = useAuth(); const { t } = useLang();
   const { data: d, error, loading, reload } = useAsync<any>(() => api.action('dashboard'), [me?.business?.id, me?.user?.id], { poll: 30000 });
   if (error) return <ErrorBox error={error} onRetry={reload} />;
   if (loading || !d) return <Spinner label="Preparing your dashboard…" />;
@@ -49,12 +50,12 @@ export default function Dashboard() {
 
       {d.actions?.length > 0 && (
         <section aria-labelledby="todo-title">
-          <h2 id="todo-title" className="mb-3 text-lg font-bold">What would you like to do?</h2>
+          <h2 id="todo-title" className="mb-3 text-lg font-bold">{t('What would you like to do?')}</h2>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
             {d.actions.map((a: any, i: number) => (
               <Link key={a.label} to={a.to} className={`group flex min-h-[112px] flex-col justify-between rounded-2xl border-2 p-4 transition hover:-translate-y-0.5 hover:shadow-pop ${i === 0 ? 'border-brand bg-brand text-white' : 'border-line bg-surface hover:border-brand'}`}>
                 <span className={`grid h-11 w-11 place-items-center rounded-xl ${i === 0 ? 'bg-white/15' : 'bg-brand-soft text-brand'}`}><Icon name={a.icon} className="h-6 w-6" /></span>
-                <span className="mt-3 text-base font-bold leading-tight">{a.label}</span>
+                <span className="mt-3 text-base font-bold leading-tight">{t(a.label)}</span>
               </Link>
             ))}
           </div>

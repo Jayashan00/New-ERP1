@@ -24,6 +24,15 @@ A complete hotel + restaurant system with a public website, built only for hotel
 
 **Every role has its own dashboard** with a plain-language summary of today, alerts, figures, lists and quick actions.
 
+## Complete front end — what the system covers
+- **Hotel:** bookings, check-in with ID + registration card, folio with taxes, check-out, room chart, night audit, **group bookings with master bill**, **banquets & events**, **cancellation & deposit policies** (fee previewed and posted automatically), housekeeping, maintenance, laundry, minibar, lost & found.
+- **Online & channels:** website booking engine with availability calendar, channel manager, **prices by date**, closed dates (stop sell), **agent allotments**, travel agents, rate plans, meal plans, automatic sync queue to Booking.com, Agoda, Expedia, Trip.com, Airbnb, Google, TripAdvisor.
+- **Guest services:** requests from room QR, taxis & transfers charged to room, parking board & log, spa/tours.
+- **Restaurant:** POS, editable 2D floor plan, waiter service board, kitchen display, QR table menu with photos, room service to folio, **cashier shift & Z-report**, recipes & food cost, kitchen and bar stock, delivery, reports.
+- **Money:** accounts, P&L, balance sheet, trial balance, ledger, VAT, budgets, **AR ageing (who owes us)**, **multi-currency** (website prices in USD/EUR/GBP/INR…).
+- **People:** HR, attendance, rosters, leave, payroll, payslips, **EPF/ETF return**, hiring, training, performance.
+- **Any hotel:** **Hotel setup wizard** (start with an empty hotel → details, rooms, tables, staff logins), **Website editor**, roles & permissions, **English / Sinhala / Tamil** with an owner-editable translations screen, built-in help with the user guide PDF.
+
 ## Website photos
 The website uses high-quality photos from **Unsplash** (free for commercial use, no attribution needed): Kandy’s Temple of the Tooth, Kandy Lake, the Bahirawakanda Buddha, Kandyan dancers, tea estates, pools and rooms. The Signature Suite and welcome section use the resort’s own four-poster room photo. Before going live, replace the stock room/pool/restaurant photos with the resort’s real ones in **Administration → Website & photos** so guests see exactly what they book.
 

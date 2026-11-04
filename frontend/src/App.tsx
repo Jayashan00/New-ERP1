@@ -10,6 +10,7 @@ import EntityPage from '@/pages/EntityPage';
 
 const L = (f: () => Promise<any>, name: string) => lazy(() => f().then((m) => ({ default: m[name] })));
 const ops = () => import('@/pages/ops');
+const more = () => import('./pages/more/index');
 const hotel = () => import('@/pages/hotel'), rest = () => import('@/pages/restaurant'), shop = () => import('@/pages/shop'), fin = () => import('@/pages/finance'), hr = () => import('@/pages/hr'), adm = () => import('@/pages/admin'), com = () => import('@/pages/common'), pub = () => import('@/pages/public/Guest');
 
 // page key -> component (permission key is "page:<key>")
@@ -21,6 +22,7 @@ const PAGES: Record<string, any> = {
   'hrm-dashboard': L(hr, 'HrmDashboard'), 'leave-balance': L(hr, 'LeaveBalance'), 'run-payroll': L(hr, 'RunPayroll'), 'crm-dashboard': L(hr, 'CrmDashboard'), 'projects-dashboard': L(hr, 'ProjectsDashboard'),
   'my-attendance': L(hr, 'MyAttendance'), 'my-leaves': L(hr, 'MyLeaves'), 'my-payslips': L(hr, 'MyPayslips'), 'my-tasks': L(hr, 'MyTasks'), 'my-bookings': L(hr, 'MyBookings'), 'my-orders': L(hr, 'MyOrders'),
   users: L(adm, 'Users'), roles: L(adm, 'Roles'), settings: L(adm, 'Settings'), 'payment-gateways': L(adm, 'PaymentGateways'), integrations: L(adm, 'Integrations'), subscription: L(adm, 'Subscription'), 'helpdesk-request': L(adm, 'HelpdeskRequest'), 'platform-settings': L(adm, 'PlatformSettings'), profile: L(adm, 'Profile'),
+  'shift-close': L(more, 'ShiftClose'), 'ar-ageing': L(more, 'ARAgeing'), 'epf-etf': L(more, 'EpfEtf'), groups: L(more, 'GroupBookings'), setup: L(more, 'SetupWizard'), translations: L(more, 'Translations'), help: L(more, 'HelpPage'),
   parking: L(ops, 'Parking'), 'channel-manager': L(ops, 'ChannelManager'), 'service-board': L(ops, 'ServiceBoard'), 'guest-billing': L(ops, 'GuestBilling'), 'room-qr': L(ops, 'RoomQRCodes'), website: L(ops, 'WebsiteSettings'),
   calendar: L(com, 'CalendarPage'), messenger: L(com, 'Messenger'), reports: L(com, 'ReportsCentre'), 'form-builder': L(com, 'FormBuilder'),
 };
